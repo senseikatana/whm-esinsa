@@ -30,7 +30,7 @@ WarehouseFlow cubre las operaciones de un almacén:
 | Lenguaje | TypeScript 7 |
 | Linting | Biome 2.6 |
 | Package Manager | Nub 0.10 |
-| IA | DeepSeek API (opcional, clave por usuario) |
+| IA | FreeLLMAPI (gateway OpenAI-compatible, opcional) |
 
 ## Requisitos previos
 
@@ -64,8 +64,17 @@ La app queda en `http://localhost:3000`.
 | `DISABLE_PUBLIC_SIGNUP` | `true` cierra el registro público | No |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth de Google | No |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | OAuth de GitHub | No |
+| `FREELLM_GATEWAY_URL` | Gateway OpenAI-compatible (default `http://127.0.0.1:31415/v1`) | No |
+| `FREELLM_GATEWAY_KEY` | Clave del gateway; solo se usa en el servidor | No |
 
 Si un proveedor OAuth no tiene credenciales, su botón aparece deshabilitado en el login.
+
+### IA
+
+Las pantallas de IA (dashboard, rutas, WhatsApp) llaman a `POST /api/ai/chat`,
+que reenvía a FreeLLMAPI con la clave del servidor. El navegador nunca ve la
+clave. Si FreeLLMAPI no está configurado, la UI usa respuestas demo locales.
+Probá la conexión desde el botón **FreeLLMAPI** del navbar.
 
 ## Scripts disponibles
 

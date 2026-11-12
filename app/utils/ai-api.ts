@@ -1,63 +1,56 @@
 const DEFAULT_SYSTEM_INSTRUCTION =
 	"Eres el consultor logístico y asistente experto AI de WarehouseFlow. Tus respuestas deben ser sumamente profesionales, concisas y directas.";
 
-const RETRY_DELAYS: number[] = [1000, 2000, 4000];
-
 /**
- * Calls the DeepSeek API with automatic retry logic.
- * Falls back to mock responses when no API key is configured.
+ * Calls the server-side FreeLLMAPI proxy.
+ * The browser never sees the gateway key.
+ *
+ * When the server has no FreeLLMAPI credentials (or the gateway is down), it
+ * falls back to the local demo response so the rest of the SGA stays usable.
  */
 export async function callAI(
 	prompt: string,
 	systemInstruction: string = DEFAULT_SYSTEM_INSTRUCTION,
+	fallback?: string,
 ): Promise<string> {
-	const apiKey = typeof window !== "undefined" ? localStorage.getItem("ai_api_key") || "" : "";
+	try {
+		const response = await fetch("/api/ai/chat", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				messages: [
+					{ role: "system", content: systemInstruction },
+					{ role: "user", content: prompt },
+				],
+				model: "auto",
+				temperature: 0.7,
+				max_tokens: 2_048,
+			}),
+		});
 
-	if (!apiKey) {
-		return getMockResponse(prompt);
-	}
+		const data = await response.json().catch(() => null);
 
-	const url = "https://api.deepseek.com/v1/chat/completions";
-	const payload = {
-		model: "deepseek-chat",
-		messages: [
-			{ role: "system", content: systemInstruction },
-			{ role: "user", content: prompt },
-		],
-		temperature: 0.7,
-		max_tokens: 2048,
-	};
-
-	for (let i = 0; i <= RETRY_DELAYS.length; i++) {
-		try {
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${apiKey}`,
-				},
-				body: JSON.stringify(payload),
-			});
-			if (!response.ok) throw new Error(`API Error: ${response.status}`);
-			const data = await response.json();
-			return data.choices?.[0]?.message?.content || "Sin respuesta del modelo.";
-		} catch (err) {
-			if (i === RETRY_DELAYS.length) {
-				console.error("DeepSeek API Error:", err);
-				return "Error al comunicar con DeepSeek API.";
-			}
-			await new Promise((res) => setTimeout(res, RETRY_DELAYS[i]));
+		if (response.status === 503 && data?.code === "AI_NOT_CONFIGURED") {
+			return fallback ?? getMockResponse(prompt);
 		}
-	}
 
-	return "Error al comunicar con DeepSeek API.";
+		if (!response.ok || !data?.success) {
+			console.error("FreeLLMAPI error:", data?.error ?? response.status);
+			return fallback ?? data?.error ?? "Error al comunicar con FreeLLMAPI.";
+		}
+
+		return data.content || fallback || "Sin respuesta del modelo.";
+	} catch (error) {
+		console.error("FreeLLMAPI request failed:", error);
+		return fallback ?? "Error al comunicar con FreeLLMAPI.";
+	}
 }
 
-// Backward compatibility alias
+// Backward compatibility alias used by older screens.
 export const callGeminiAPI = callAI;
 
 /**
- * Provides mock responses when no API key is configured.
+ * Local demo responses used when FreeLLMAPI is not configured.
  */
 function getMockResponse(prompt: string): string {
 	const lower = prompt.toLowerCase();

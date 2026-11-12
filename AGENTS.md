@@ -43,6 +43,7 @@ Single app at the repository root (the old `withastro/` and `withnext/` split no
 - `withastro`-era leftovers: `app/lib/apis/*`, `app/lib/queries.ts`, `app/lib/services/api-manager.ts` and most `app/lib/services/*` are not imported by the UI. Verify imports before extending or deleting them.
 - The Neon project provisioned by the agent is claimable and expires unless claimed. Claiming rotates `DATABASE_URL`; update the env afterwards.
 - OAuth buttons read `/api/auth-config`; if a provider is not configured the button stays disabled. There are no app-level `GOOGLE_CLIENT_ID` reads anywhere else.
+- AI requests go through `app/api/ai/chat` (session + per-user rate limit) to FreeLLMAPI. Never move `FREELLM_GATEWAY_KEY` to the client or a `NEXT_PUBLIC_*` var; the default gateway is `http://127.0.0.1:31415/v1`.
 
 ## Conventions
 

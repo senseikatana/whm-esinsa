@@ -38,6 +38,7 @@ import {
 	normalizeStaff,
 } from "./lib/normalize";
 import { SEED_CUSTOMERS, SEED_ORDERS, SEED_PICKING, SEED_PRODUCTS, SEED_STAFF } from "./lib/seeds";
+import { callAI } from "./utils/ai-api";
 
 // initial mock/fallback data derived from the canonical seed datasets in
 // app/lib/seeds/* (kept in sync with the Neon tables through db/seeds/*.sql)
@@ -116,90 +117,6 @@ const INITIAL_SAP_LOGS = [
 		type: "warning",
 	},
 ];
-
-// Helper to get AI API key (SSR-safe)
-const getAIApiKey = () =>
-	typeof window !== "undefined" ? localStorage.getItem("ai_api_key") || "" : "";
-
-// callAI helper (DeepSeek)
-const callGeminiAPI = async (
-	prompt: string,
-	systemInstruction = "Eres el consultor logístico y asistente experto AI de WarehouseFlow. Tus respuestas deben ser sumamente profesionales, concisas y directas.",
-) => {
-	const apiKey = getAIApiKey();
-	if (!apiKey) {
-		await new Promise((res) => setTimeout(res, 800));
-		if (prompt.toLowerCase().includes("json")) {
-			if (prompt.includes("inventory")) {
-				return JSON.stringify({
-					sku: `SKU-${Math.floor(100 + Math.random() * 900)}`,
-					name: "Producto IA Generado",
-					category: "Almacenaje",
-					stock: 120,
-					minStock: 20,
-					location: "A-05-01",
-					price: 45.0,
-				});
-			}
-			if (prompt.includes("crm") || prompt.includes("cliente")) {
-				return JSON.stringify({
-					code: `CUST0${Math.floor(10 + Math.random() * 90)}`,
-					name: "Empresa Logística IA",
-					type: "Cliente",
-					email: "ia@empresalogistica.com",
-					phone: "+34 600 000 000",
-					status: "Activo",
-				});
-			}
-			if (prompt.includes("order") || prompt.includes("orden")) {
-				return JSON.stringify({
-					orderNumber: `PED-2026-${Math.floor(100 + Math.random() * 900)}`,
-					customerName: "Mercadona S.A.",
-					status: "Pendiente",
-					priority: "normal",
-					totalItems: 6,
-					totalValue: 850.0,
-				});
-			}
-			return JSON.stringify({ ok: true });
-		}
-		if (prompt.toLowerCase().includes("ruta")) {
-			return "Optimización IA sugerida: La ruta más corta para picking es de Dock A -> Pasillo A-02 -> Rack Level 3 -> Consolidador A. Esto ahorra un 22% de tiempo de recorrido.";
-		}
-		if (prompt.toLowerCase().includes("whatsapp")) {
-			return "Hola, sí. Su pedido ya está listo para despacho en el Muelle de Carga C. Puede ingresar con el camión ahora.";
-		}
-		return "Simulación de Asistente IA de WarehouseFlow: Se sugiere optimizar la ubicación de la categoría Palets debido a una alta tasa de rotación (Clase A).";
-	}
-
-	const url = "https://api.deepseek.com/v1/chat/completions";
-	const payload = {
-		model: "deepseek-chat",
-		messages: [
-			{ role: "system", content: systemInstruction },
-			{ role: "user", content: prompt },
-		],
-		temperature: 0.7,
-		max_tokens: 2048,
-	};
-
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify(payload),
-		});
-		if (!response.ok) throw new Error("API Error");
-		const data = await response.json();
-		return data.choices?.[0]?.message?.content || "Sin respuesta del modelo.";
-	} catch (err) {
-		console.error("DeepSeek API Error:", err);
-		return "Error al comunicar con DeepSeek API.";
-	}
-};
 
 const translations = {
 	es: {
@@ -297,19 +214,26 @@ export default function App() {
 		staff: "/staff",
 	};
 
-	// AI Modal Configuration — SSR-safe: init with stable defaults,
-	// read localStorage only in useEffect after hydration.
-	const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-	const [tempApiKey, setTempApiKey] = useState("");
-	const [hasApiKey, setHasApiKey] = useState(false);
+	// FreeLLMAPI status comes from the server; the gateway key never reaches the browser.
+	const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+	const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
+	const [aiValid, setAiValid] = useState<boolean | null>(null);
+	const [aiTest, setAiTest] = useState<string | null>(null);
+	const [aiTesting, setAiTesting] = useState(false);
 
 	const t = translations[lang];
 
-	// Hydrate AI API key from localStorage after mount
 	useEffect(() => {
-		const key = getAIApiKey();
-		setTempApiKey(key);
-		setHasApiKey(!!key);
+		fetch("/api/ai/status")
+			.then((res) => (res.ok ? res.json() : null))
+			.then((data) => {
+				setAiConfigured(Boolean(data?.configured));
+				setAiValid(Boolean(data?.valid));
+			})
+			.catch(() => {
+				setAiConfigured(false);
+				setAiValid(false);
+			});
 	}, []);
 
 	// API fetches with fallback logic
@@ -491,7 +415,7 @@ export default function App() {
       ${entity === "staff" ? "name, role (Operario/Supervisor/Administrador), zone, status (Activo)" : ""}
       Devuelve ÚNICAMENTE el array JSON sin formatear con markdown ni bloques de código.`;
 
-			const res = await callGeminiAPI(prompt, "Eres un generador de datos JSON válidos de WMS.");
+			const res = await callAI(prompt, "Eres un generador de datos JSON válidos de WMS.");
 			const cleanedJson = res
 				.replace(/```json/g, "")
 				.replace(/```/g, "")
@@ -577,11 +501,25 @@ export default function App() {
 		}
 	};
 
-	// Save AI API Key
-	const handleSaveApiKey = () => {
-		localStorage.setItem("ai_api_key", tempApiKey);
-		setHasApiKey(!!tempApiKey);
-		setIsApiKeyModalOpen(false);
+	const handleTestAI = async () => {
+		setAiTesting(true);
+		setAiTest(null);
+		try {
+			const response = await fetch("/api/ai/chat", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					messages: [{ role: "user", content: "Responde solo: FreeLLMAPI OK" }],
+					max_tokens: 20,
+				}),
+			});
+			const data = await response.json().catch(() => null);
+			setAiTest(response.ok ? `OK: ${data?.content ?? "sin contenido"}` : (data?.error ?? "Error"));
+		} catch {
+			setAiTest("Error de conexión con el servidor");
+		} finally {
+			setAiTesting(false);
+		}
 	};
 
 	// Global search filtering
@@ -664,22 +602,22 @@ export default function App() {
 						</span>
 					</div>
 
-					{/* AI Key button */}
+					{/* FreeLLMAPI status */}
 					<button
 						type="button"
-						onClick={() => setIsApiKeyModalOpen(true)}
+						onClick={() => setIsAiModalOpen(true)}
 						className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed ${
-							hasApiKey
+							aiConfigured && aiValid
 								? "bg-indigo-950/60 text-indigo-300 border-indigo-800/80 hover:bg-indigo-900/40"
 								: "bg-amber-950/60 text-amber-300 border-amber-800/80 hover:bg-amber-900/40"
 						}`}
 					>
 						<Bot
 							size={14}
-							className={hasApiKey ? "text-indigo-400" : "text-amber-400"}
+							className={aiConfigured && aiValid ? "text-indigo-400" : "text-amber-400"}
 							aria-hidden="true"
 						/>
-						<span>{hasApiKey ? "DeepSeek Activo" : "Conectar IA"}</span>
+						<span>{aiConfigured && aiValid ? "FreeLLMAPI Activo" : "Conectar FreeLLMAPI"}</span>
 					</button>
 
 					{/* Language selection */}
@@ -991,54 +929,75 @@ export default function App() {
 				</main>
 			</div>
 
-			{/* AI API Key Modal */}
-			{isApiKeyModalOpen && (
+			{/* FreeLLMAPI modal */}
+			{isAiModalOpen && (
 				<div className="fixed inset-0 bg-[#050811]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
 					<div className="bg-[#0b0f19] border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-y-auto overscroll-contain">
 						<div className="flex justify-between items-center mb-4">
 							<h3 className="text-lg font-bold flex items-center gap-2 text-indigo-400">
-								<Bot size={20} aria-hidden="true" /> Conectar Inteligencia Artificial
+								<Bot size={20} aria-hidden="true" /> FreeLLMAPI
 							</h3>
 							<button
 								type="button"
-								onClick={() => setIsApiKeyModalOpen(false)}
+								onClick={() => setIsAiModalOpen(false)}
 								className="p-1.5 -mr-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
 								aria-label="Cerrar"
 							>
 								<X size={20} aria-hidden="true" />
 							</button>
 						</div>
+
 						<p className="text-xs text-slate-400 mb-4">
-							Introduce tu clave API de DeepSeek. Se guardará de forma local en tu navegador para habilitar
-							la generación de respuestas reales y autocompletado en el SGA.
+							El asistente usa el gateway <span className="text-slate-200 font-semibold">FreeLLMAPI</span>{" "}
+							configurado en el servidor. La clave vive en{" "}
+							<code className="text-indigo-300">.env.local</code> y nunca se envía al navegador.
 						</p>
-						<input
-							type="password"
-							aria-label="DeepSeek API Key"
-							placeholder="DeepSeek API Key (sk-…)"
-							value={tempApiKey}
-							onChange={(e) => setTempApiKey(e.target.value)}
-							className="w-full bg-[#050811] border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus-visible:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500/30 mb-4"
-						/>
-						<div className="flex justify-end space-x-3 text-sm">
+
+						<div className="flex items-center gap-2 text-xs mb-4">
+							<span
+								className={`h-2 w-2 rounded-full ${aiConfigured ? "bg-emerald-500" : "bg-amber-500"}`}
+							/>
+							<span className="text-slate-300">
+								{aiConfigured === null ? "Verificando…" : aiConfigured ? "Configurado" : "No configurado"}
+							</span>
+						</div>
+
+						{!aiConfigured && aiConfigured !== null && (
+							<div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-[11px] text-amber-300 mb-4 font-mono leading-relaxed">
+								FREELLM_GATEWAY_URL=http://127.0.0.1:31415/v1
+								<br />
+								FREELLM_GATEWAY_KEY=freellmapi-…
+							</div>
+						)}
+
+						{aiTest && (
+							<div
+								className={`rounded-xl p-3 text-xs mb-4 ${
+									aiTest.startsWith("OK")
+										? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+										: "bg-rose-500/10 border border-rose-500/30 text-rose-300"
+								}`}
+							>
+								{aiTest}
+							</div>
+						)}
+
+						<div className="flex justify-end gap-3 text-sm">
 							<button
 								type="button"
-								onClick={() => {
-									setTempApiKey("");
-									localStorage.removeItem("ai_api_key");
-									setHasApiKey(false);
-									setIsApiKeyModalOpen(false);
-								}}
-								className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+								onClick={() => setIsAiModalOpen(false)}
+								className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
 							>
-								Limpiar Clave
+								Cerrar
 							</button>
 							<button
 								type="button"
-								onClick={handleSaveApiKey}
-								className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+								onClick={handleTestAI}
+								disabled={!aiConfigured || aiTesting}
+								className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
 							>
-								Guardar
+								{aiTesting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
+								Probar conexión
 							</button>
 						</div>
 					</div>

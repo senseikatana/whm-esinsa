@@ -2,42 +2,7 @@
 
 import { Bot, Loader2, Route as RouteIcon, Sparkles } from "lucide-react";
 import { useState } from "react";
-
-// local call helper (DeepSeek)
-const callAILocal = async (prompt: string) => {
-	const apiKey = typeof window !== "undefined" ? localStorage.getItem("ai_api_key") || "" : "";
-	if (!apiKey) {
-		await new Promise((res) => setTimeout(res, 800));
-		return "Ruta Inteligente Generada (Mock):\n1. Empieza en el Muelle de Recepción A.\n2. Recoge SKU-001 en A-01-01.\n3. Muévete al Pasillo B y recoge SKU-003 en B-05-02.\n4. Lleva el carro al área de empaque C.\n\nEsta secuencia optimiza el recorrido reduciendo el tránsito en un 28% comparado con discrete picking.";
-	}
-	const url = "https://api.deepseek.com/v1/chat/completions";
-	const payload = {
-		model: "deepseek-chat",
-		messages: [
-			{
-				role: "system",
-				content: "Eres un planificador de rutas logísticas y experto SGA de WarehouseFlow.",
-			},
-			{ role: "user", content: prompt },
-		],
-		temperature: 0.7,
-		max_tokens: 1024,
-	};
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify(payload),
-		});
-		const data = await response.json();
-		return data.choices?.[0]?.message?.content || "No se pudo obtener la sugerencia.";
-	} catch (_err) {
-		return "Error al comunicar con la IA.";
-	}
-};
+import { callAI } from "../utils/ai-api";
 
 export default function RoutesView() {
 	const [optimizedText, setOptimizedText] = useState<string>("");
@@ -45,8 +10,16 @@ export default function RoutesView() {
 
 	const handleOptimizeRoute = async () => {
 		setLoadingRoute(true);
-		const text = await callAILocal(
+		const text = await callAI(
 			"Dime la ruta más optimizada para recoger productos ubicados en los pasillos A, B y C. Formato paso a paso de directivas cortas de almacén.",
+			"Eres un planificador de rutas logísticas y experto SGA de WarehouseFlow.",
+			`Ruta Inteligente Generada (Mock):
+1. Empieza en el Muelle de Recepción A.
+2. Recoge SKU-001 en A-01-01.
+3. Muévete al Pasillo B y recoge SKU-003 en B-05-02.
+4. Lleva el carro al área de empaque C.
+
+Esta secuencia optimiza el recorrido reduciendo el tránsito en un 28% comparado con discrete picking.`,
 		);
 		setOptimizedText(text);
 		setLoadingRoute(false);

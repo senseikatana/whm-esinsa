@@ -124,6 +124,7 @@ Maintenance release with 3 changes.
 - Pool lazy: `next build` ya no requiere `DATABASE_URL`; el error aparece al primer query.
 - `DISABLE_PUBLIC_SIGNUP` para cerrar el registro; contraseñas mínimo 8.
 - Migraciones con advisory lock y `DATABASE_URL_UNPOOLED`.
+- IA migrada de DeepSeek (clave en localStorage) a **FreeLLMAPI** vía proxy server-side `POST /api/ai/chat`, con rate limit por usuario y estado en `/api/ai/status`.
 - Eliminados el proxy de Cloudflare y las migraciones/esquema de InsForge.
 
 ### Fixed

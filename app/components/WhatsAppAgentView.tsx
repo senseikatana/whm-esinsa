@@ -3,41 +3,7 @@
 import { Bot, Loader2, MessageCircle, Send } from "lucide-react";
 import { useState } from "react";
 import type { WhatsAppAgentViewProps } from "../interfaces";
-
-const callAILocal = async (prompt: string) => {
-	const apiKey = typeof window !== "undefined" ? localStorage.getItem("ai_api_key") || "" : "";
-	if (!apiKey) {
-		await new Promise((res) => setTimeout(res, 800));
-		return "Hola, sí. Su pedido ya está listo para despacho en el Muelle de Carga C. Puede ingresar con el camión ahora.";
-	}
-	const url = "https://api.deepseek.com/v1/chat/completions";
-	const payload = {
-		model: "deepseek-chat",
-		messages: [
-			{
-				role: "system",
-				content: "Eres el asistente y coordinador logístico de WhatsApp de WarehouseFlow.",
-			},
-			{ role: "user", content: prompt },
-		],
-		temperature: 0.7,
-		max_tokens: 1024,
-	};
-	try {
-		const response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
-			body: JSON.stringify(payload),
-		});
-		const data = await response.json();
-		return data.choices?.[0]?.message?.content || "No se pudo redactar la respuesta.";
-	} catch (_err) {
-		return "Error generando respuesta automática.";
-	}
-};
+import { callAI } from "../utils/ai-api";
 
 export default function WhatsAppAgentView({ chats, setDbState }: WhatsAppAgentViewProps) {
 	const [activeChat, setActiveChat] = useState<any>(chats[0] || null);
@@ -47,8 +13,10 @@ export default function WhatsAppAgentView({ chats, setDbState }: WhatsAppAgentVi
 	const handleGenerateAIResponse = async () => {
 		if (!activeChat) return;
 		setLoadingResponse(true);
-		const res = await callAILocal(
+		const res = await callAI(
 			`Responde de manera formal y directa a este mensaje de logística de WhatsApp: "${activeChat.message}"`,
+			"Eres el asistente y coordinador logístico de WhatsApp de WarehouseFlow.",
+			"Hola, sí. Su pedido ya está listo para despacho en el Muelle de Carga C. Puede ingresar con el camión ahora.",
 		);
 		setReplyText(res);
 		setLoadingResponse(false);
