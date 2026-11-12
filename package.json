@@ -1,0 +1,66 @@
+{
+	"name": "whm-esinsa-withnext",
+	"version": "0.6.0",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+
+		"lint": "biome lint ./app",
+		"lint:fix": "biome lint --write ./app",
+		"format": "biome format ./app",
+		"format:fix": "biome format --write ./app",
+		"check": "biome check ./app",
+		"check:fix": "biome check --write ./app",
+
+		"worker:dev": "wrangler dev --config ./cloudflare-worker/wrangler.toml",
+		"worker:deploy": "wrangler deploy --config ./cloudflare-worker/wrangler.toml",
+		"worker:tail": "wrangler tail --config ./cloudflare-worker/wrangler.toml",
+		"worker:delete": "wrangler delete --config ./cloudflare-worker/wrangler.toml whm-withnext-proxy",
+
+		"db": "bunx -y @insforge/cli@latest",
+		"db:health": "bunx -y @insforge/cli@latest current",
+		"db:query": "bunx -y @insforge/cli@latest db query",
+		"db:migrate": "bunx -y @insforge/cli@latest db migrations up --all",
+		"db:migrate:new": "bunx -y @insforge/cli@latest db migrations new",
+		"db:secrets": "bunx -y @insforge/cli@latest secrets list",
+		"db:deploy": "bunx -y @insforge/cli@latest deployments deploy .",
+		"db:diagnose": "bunx -y @insforge/cli@latest diagnose",
+
+		"deploy": "concurrently --names build,worker --prefixColors blue,green \"bun run build\" \"bun run worker:deploy\"",
+		"deploy:full": "concurrently --names insforge,worker --prefixColors cyan,magenta \"bun run db:deploy\" \"bun run worker:deploy\"",
+
+		"postinstall": "next telemetry disable"
+	},
+	"dependencies": {
+		"@apollo/client": "^4.2.12",
+		"@apollo/server": "^5.5.1",
+		"@as-integrations/next": "^4.1.0",
+		"@insforge/sdk": "^1.5.2",
+		"graphql": "^17.0.2",
+		"lucide-react": "^1.38.0",
+		"next": "16.2.12",
+		"react": "19.2.4",
+		"react-dom": "19.2.4"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.11",
+		"@tailwindcss/postcss": "^4.3.3",
+		"@types/node": "^20.19.43",
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.5",
+		"babel-plugin-react-compiler": "1.0.0",
+		"concurrently": "^10.0.5",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.127.1"
+	},
+	"ignoreScripts": [
+		"sharp",
+		"unrs-resolver"
+	],
+	"trustedDependencies": [
+		"sharp",
+		"unrs-resolver"
+	]
+}
