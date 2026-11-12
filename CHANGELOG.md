@@ -5,6 +5,109 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adherido a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-11-12
+
+Maintenance release with 3 changes.
+
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat: environment variables and db setup scripts updated `089a2cd`
+  - `.env.example`
+  - `AGENTS.md`
+  - `README.md`
+  - `app/api/auth-config/route.ts`
+  - `app/api/files/[key]/route.ts`
+  - `app/api/files/route.ts`
+  - `app/api/graphql/resolvers.ts`
+  - `app/api/helper.ts`
+  - `app/lib/auth-options.ts`
+  - `app/lib/auth.ts`
+  - `app/lib/db.ts`
+  - `app/lib/drizzle.ts`
+  - `app/lib/env.ts`
+  - `app/lib/repositories/crud.ts`
+  - `app/lib/schema.ts`
+  - `app/lib/services/base.ts`
+  - `app/lib/table-columns.ts`
+  - `app/lib/tables.ts`
+  - `docs/AUTH.md`
+  - `drizzle.config.ts`
+  - `nub.lock`
+  - `package.json`
+  - `scripts/check-env.ts`
+  - `scripts/db-migrate.ts`
+  - `scripts/seed.ts`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat: update documentation and configuration files to reflect changes in ar `38a26af`
+  - `.env.example`
+  - `.gitignore`
+  - `AGENTS.md`
+  - `CONTRIBUTING.md`
+  - `README.md`
+  - `app/App.tsx`
+  - `app/api/auth-config/route.ts`
+  - `app/api/auth/[...all]/route.ts`
+  - `app/api/customers/[id]/route.ts`
+  - `app/api/customers/route.ts`
+  - `app/api/files/[key]/route.ts`
+  - `app/api/files/route.ts`
+  - `app/api/graphql/resolvers.ts`
+  - `app/api/graphql/route.ts`
+  - `app/api/helper.ts`
+  - `app/api/orders/[id]/route.ts`
+  - `app/api/orders/route.ts`
+  - `app/api/picking-tasks/[id]/route.ts`
+  - `app/api/picking-tasks/route.ts`
+  - `app/api/products/[id]/route.ts`
+  - `app/api/products/route.ts`
+  - `app/api/staff/[id]/route.ts`
+  - `app/api/staff/route.ts`
+  - `app/components/DesktopDashboardView.tsx`
+  - `app/components/LoginPage.tsx`
+  - `app/interfaces/auth.ts`
+  - `app/layout.tsx`
+  - `app/lib/api-auth.ts`
+  - `app/lib/auth-client.ts`
+  - `app/lib/auth-context.tsx`
+  - `app/lib/auth-options.ts`
+  - `app/lib/auth.ts`
+  - `app/lib/db.ts`
+  - `app/lib/file-limits.ts`
+  - `app/lib/index.ts`
+  - `app/lib/insforge.ts`
+  - `app/lib/seeds/accounts.ts`
+  - `app/lib/seeds/users.ts`
+  - `app/lib/services/base.ts`
+  - `app/lib/storage.ts`
+  - `app/lib/table-columns.ts`
+  - `biome.json`
+  - `cloudflare-worker/.gitignore`
+  - `cloudflare-worker/AGENTS.md`
+  - `cloudflare-worker/README.md`
+  - `cloudflare-worker/worker.ts`
+  - `cloudflare-worker/wrangler.toml`
+  - `db/migrations/0001_warehouse_schema.sql`
+  - `db/migrations/0002_user_profiles_view.sql`
+  - `db/seeds/001_seed_warehouse_data.sql`
+  - `db/seeds/002_seed_esinsa_catalog.sql`
+  - `db/seeds/003_backfill_links.sql`
+  - `docs/AUTH.md`
+  - `migrations/20260901084243_create-warehouse-tables.sql`
+  - `migrations/20260901090937_seed-warehouse-data.sql`
+  - `migrations/20260901120956_create-user-roles.sql`
+  - `migrations/20260901122700_add-slug-columns.sql`
+  - `migrations/20260901153856_setup-realtime.sql`
+  - `migrations/20260919090000_add-warehouse-integrity.sql`
+  - `migrations/20260919090500_fix-realtime-coverage.sql`
+  - `migrations/20260919091000_seed-esinsa-catalog.sql`
+  - `next.config.ts`
+  - `nub.lock`
+  - `package.json`
+  - `scripts/db-migrate.ts`
+  - `scripts/seed.ts`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafix: update lucide-react to ^1.72.0 `3a7ae43`
+  - `nub.lock`
+  - `package.json`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat(package.json): remove bun and nub lockfiles `87eef86`
+- 🚀 feat: implement warehouse migration scripts and schema changes for warehous `dd7181b`
+
 ## [0.8.0] - 2026-11-12
 
 ### Changed
