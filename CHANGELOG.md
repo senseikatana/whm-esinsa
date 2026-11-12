@@ -5,6 +5,121 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adherido a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-12
+
+Highlights: feat: implement warehouse migration scripts and schema changes for warehous, plus 1 more change.
+
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat(package.json): remove bun and nub lockfiles `87eef86`
+  - `bun.lock`
+  - `nub.lock`
+  - `package.json`
+- 🚀 feat: implement warehouse migration scripts and schema changes for warehous `dd7181b`
+  - `.biomeignore`
+  - `.env.example`
+  - `.gitignore`
+  - `AGENTS.md`
+  - `CONTRIBUTING.md`
+  - `LICENSE`
+  - `README.md`
+  - `app/App.tsx`
+  - `app/api/customers/[id]/route.ts`
+  - `app/api/customers/route.ts`
+  - `app/api/graphql/resolvers.ts`
+  - `app/api/graphql/route.ts`
+  - `app/api/graphql/schema.ts`
+  - `app/api/helper.ts`
+  - `app/api/orders/[id]/route.ts`
+  - `app/api/orders/route.ts`
+  - `app/api/picking-tasks/[id]/route.ts`
+  - `app/api/picking-tasks/route.ts`
+  - `app/api/products/[id]/route.ts`
+  - `app/api/products/route.ts`
+  - `app/assets/hero.png`
+  - `app/assets/react.svg`
+  - `app/assets/vite.svg`
+  - `app/components/AuthModal.tsx`
+  - `app/components/CrudView.tsx`
+  - `app/components/DesktopDashboardView.tsx`
+  - `app/components/FileUpload.tsx`
+  - `app/components/KpiCard.tsx`
+  - `app/components/LoginPage.tsx`
+  - `app/components/MobileAppSimulator.tsx`
+  - `app/components/RoutesView.tsx`
+  - `app/components/SapIntegrationView.tsx`
+  - `app/components/SidebarItem.tsx`
+  - `app/components/VoicePickingView.tsx`
+  - `app/components/WhatsAppAgentView.tsx`
+  - `app/components/index.ts`
+  - `app/favicon.ico`
+  - `app/globals.css`
+  - `app/interfaces/api.ts`
+  - `app/interfaces/auth.ts`
+  - `app/interfaces/components.ts`
+  - `app/interfaces/crud.ts`
+  - `app/interfaces/entities.ts`
+  - `app/interfaces/index.ts`
+  - `app/interfaces/storage.ts`
+  - `app/layout.tsx`
+  - `app/lib/apis/graphql-client.ts`
+  - `app/lib/apis/index.ts`
+  - `app/lib/apis/warehouse.api.ts`
+  - `app/lib/apollo.ts`
+  - `app/lib/auth-context.tsx`
+  - `app/lib/auth.ts`
+  - `app/lib/base-path.ts`
+  - `app/lib/index.ts`
+  - `app/lib/insforge.ts`
+  - `app/lib/normalize.ts`
+  - `app/lib/queries.ts`
+  - `app/lib/seeds/customers.ts`
+  - `app/lib/seeds/index.ts`
+  - `app/lib/seeds/orders.ts`
+  - `app/lib/seeds/picking.ts`
+  - `app/lib/seeds/products.ts`
+  - `app/lib/seeds/staff.ts`
+  - `app/lib/seeds/users.ts`
+  - `app/lib/services/api-error.ts`
+  - `app/lib/services/api-manager.ts`
+  - `app/lib/services/base.ts`
+  - `app/lib/services/customers.ts`
+  - `app/lib/services/index.ts`
+  - `app/lib/services/orders.ts`
+  - `app/lib/services/picking.ts`
+  - `app/lib/services/products.ts`
+  - `app/lib/services/slugify.service.ts`
+  - `app/lib/services/staff.ts`
+  - `app/lib/storage.ts`
+  - `app/page.tsx`
+  - `app/providers.tsx`
+  - `app/utils/ai-api.ts`
+  - `app/utils/index.ts`
+  - `app/utils/sku-generator.ts`
+  - `biome.json`
+  - `bun.lock`
+  - `cloudflare-worker/.gitignore`
+  - `cloudflare-worker/AGENTS.md`
+  - `cloudflare-worker/README.md`
+  - `cloudflare-worker/worker.ts`
+  - `cloudflare-worker/wrangler.toml`
+  - `docs/AUTH.md`
+  - `migrations/20260901084243_create-warehouse-tables.sql`
+  - `migrations/20260901090937_seed-warehouse-data.sql`
+  - `migrations/20260901120956_create-user-roles.sql`
+  - `migrations/20260901122700_add-slug-columns.sql`
+  - `migrations/20260901153856_setup-realtime.sql`
+  - `migrations/20260919090000_add-warehouse-integrity.sql`
+  - `migrations/20260919090500_fix-realtime-coverage.sql`
+  - `migrations/20260919091000_seed-esinsa-catalog.sql`
+  - `next.config.ts`
+  - `package.json`
+  - `postcss.config.mjs`
+  - `public/file.svg`
+  - `public/globe.svg`
+  - `public/next.svg`
+  - `public/vercel.svg`
+  - `public/window.svg`
+  - `tsconfig.json`
+
 ## [0.6.0] — 2026-09-01
 
 ### Añadido
