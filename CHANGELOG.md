@@ -5,6 +5,32 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adherido a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-11-12
+
+Highlights: feat(ai): proxy FreeLLMAPI through the server, plus 2 more changes.
+
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat(db): create new tables for account, customers, files, orders, and pick `91bcf77`
+  - `db/drizzle/0000_flashy_zeigeist.sql`
+  - `db/drizzle/meta/0000_snapshot.json`
+  - `db/drizzle/meta/_journal.json`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat: update deps in nub.lock and package.json `1daba3c`
+  - `nub.lock`
+  - `package.json`
+- 🚀 feat(ai): proxy FreeLLMAPI through the server `55835c9`
+  - `.env.example`
+  - `AGENTS.md`
+  - `README.md`
+  - `app/App.tsx`
+  - `app/api/ai/chat/route.ts`
+  - `app/api/ai/status/route.ts`
+  - `app/components/RoutesView.tsx`
+  - `app/components/WhatsAppAgentView.tsx`
+  - `app/lib/rate-limit.ts`
+  - `app/utils/ai-api.ts`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat: environment variables and db setup scripts updated `089a2cd`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafeat: update documentation and configuration files to reflect changes in ar `38a26af`
+- 🔹 ]7;file://localhost/home/senseikatana/Proyectos/next/whm-esinsafix: update lucide-react to ^1.72.0 `3a7ae43`
+
 ## [0.8.1] - 2026-11-12
 
 Maintenance release with 3 changes.
