@@ -6,7 +6,7 @@ Single app at the repository root (the old `withastro/` and `withnext/` split no
 ## Layout
 
 - `app/` — App Router. The UI is client-side (`app/App.tsx`), route handlers live under `app/api/`.
-- `app/lib/` — auth (Better Auth), Postgres pool, CRUD services, seed data.
+- `app/lib/` — auth (Better Auth), lazy Postgres pool, Drizzle schema/client, repositories, seed data.
 - `db/migrations/` — SQL migrations applied by `scripts/db-migrate.ts`.
 - `db/seeds/` — idempotent demo data applied by `scripts/seed.ts`.
 - `docs/AUTH.md` — auth flow, roles, OAuth setup.
@@ -21,6 +21,8 @@ Single app at the repository root (the old `withastro/` and `withnext/` split no
 - `nub run db:migrate` — applies `db/migrations/*.sql` once, tracked in `schema_migrations`.
 - `nub run db:seed` — demo catalog + the six demo accounts (idempotent).
 - `nub run db:setup` — the three above, in order.
+- `nub run env:check` — validates env vars, DB connectivity and schema presence.
+- `nub run db:studio` / `nub run db:generate` — Drizzle Studio / SQL generation from `app/lib/schema.ts`.
 
 ## Auth rules
 
@@ -30,12 +32,13 @@ Single app at the repository root (the old `withastro/` and `withnext/` split no
 - Public sign-ups get `viewer`; promote roles in the database. Unknown or inactive accounts fail closed in `getSessionUser`.
 - Roles are `input: false` in Better Auth. Role changes happen in the database, never from the browser.
 - Demo credentials live in `app/lib/seeds/accounts.ts` and are rendered by `LoginPage` from that same module.
+- Passwords require 8+ characters. `DISABLE_PUBLIC_SIGNUP=true` closes public registration; new accounts default to `viewer`.
 
 ## Gotchas
 
-- `DATABASE_URL` and `BETTER_AUTH_SECRET` are required at runtime. Missing `DATABASE_URL` fails fast in `app/lib/db.ts` instead of silently pointing somewhere else.
-- `pg` is in `serverExternalPackages` (see `next.config.ts`); do not import `app/lib/db.ts` from client code.
-- SQL is built only from allowlisted table/column names (`app/lib/table-columns.ts`). Add new columns there before exposing them through the CRUD API.
+- `DATABASE_URL` and `BETTER_AUTH_SECRET` are required at runtime. The pool is lazy, so `next build` works without credentials; `query()` and `nub run env:check` fail with a clear message.
+- `pg` is in `serverExternalPackages` (see `next.config.ts`); do not import `app/lib/db.ts`, `app/lib/drizzle.ts` or `app/lib/schema.ts` from client code.
+- All domain queries go through `app/lib/repositories/crud.ts`; table/column allowlists are derived from `app/lib/schema.ts` (`app/lib/tables.ts`). When you add a column, update the Drizzle schema and add a SQL migration in `db/migrations/`.
 - `nub install` enforces a 24h minimum release age. If a freshly published package is blocked, pick the previous patch or exempt it explicitly instead of disabling the gate.
 - `withastro`-era leftovers: `app/lib/apis/*`, `app/lib/queries.ts`, `app/lib/services/api-manager.ts` and most `app/lib/services/*` are not imported by the UI. Verify imports before extending or deleting them.
 - The Neon project provisioned by the agent is claimable and expires unless claimed. Claiming rotates `DATABASE_URL`; update the env afterwards.

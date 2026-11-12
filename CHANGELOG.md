@@ -16,6 +16,11 @@ y este proyecto adherido a [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Esquema y seeds movidos a `db/migrations/` y `db/seeds/`, con runner idempotente (`bun run db:setup`).
 - El login muestra las cuentas demo desde `app/lib/seeds/accounts.ts` y deshabilita los botones OAuth sin credenciales.
 - Todos los route handlers exigen sesión; el rol `viewer` no puede escribir.
+- **Drizzle ORM 0.45**: schema tipado (`app/lib/schema.ts`), cliente (`app/lib/drizzle.ts`) y repositorio único (`app/lib/repositories/crud.ts`).
+- `nub run env:check` valida variables, conexión y presencia del esquema.
+- Pool lazy: `next build` ya no requiere `DATABASE_URL`; el error aparece al primer query.
+- `DISABLE_PUBLIC_SIGNUP` para cerrar el registro; contraseñas mínimo 8.
+- Migraciones con advisory lock y `DATABASE_URL_UNPOOLED`.
 - Eliminados el proxy de Cloudflare y las migraciones/esquema de InsForge.
 
 ### Fixed

@@ -1,45 +1,26 @@
 import type { BetterAuthOptions } from "better-auth";
-import { pool } from "./db";
-
-const googleConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
-
-export function configuredProviders(): { google: boolean; github: boolean } {
-	return { google: googleConfigured, github: githubConfigured };
-}
+import { getPool } from "./db";
+import { getOAuthProviders, publicSignupEnabled, trustedOrigins } from "./env";
 
 /** Shared Better Auth options for the Next handler and server-side scripts. */
 export function authOptions(): BetterAuthOptions {
+	const providers = getOAuthProviders();
+
 	return {
-		database: pool,
+		// Better Auth's Kysely adapter accepts a node-postgres Pool directly.
+		database: getPool(),
 		baseURL: process.env.BETTER_AUTH_URL,
 		secret: process.env.BETTER_AUTH_SECRET,
-		trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "")
-			.split(",")
-			.map((origin) => origin.trim())
-			.filter(Boolean),
+		trustedOrigins: trustedOrigins(),
 		emailAndPassword: {
 			enabled: true,
-			minPasswordLength: 6,
+			minPasswordLength: 8,
 			autoSignIn: true,
+			disableSignUp: !publicSignupEnabled(),
 		},
 		socialProviders: {
-			...(googleConfigured
-				? {
-						google: {
-							clientId: process.env.GOOGLE_CLIENT_ID as string,
-							clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-						},
-					}
-				: {}),
-			...(githubConfigured
-				? {
-						github: {
-							clientId: process.env.GITHUB_CLIENT_ID as string,
-							clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-						},
-					}
-				: {}),
+			...(providers.google ? { google: providers.google } : {}),
+			...(providers.github ? { github: providers.github } : {}),
 		},
 		user: {
 			additionalFields: {

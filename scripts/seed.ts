@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { betterAuth } from "better-auth";
 import { authOptions } from "../app/lib/auth-options";
-import { pool } from "../app/lib/db";
+import { getPool } from "../app/lib/db";
 import { SEED_ACCOUNTS } from "../app/lib/seeds/accounts";
 
 const SEEDS_DIR = path.join(process.cwd(), "db", "seeds");
@@ -12,7 +12,7 @@ async function runSeedSql() {
 
 	for (const file of files) {
 		const sql = await readFile(path.join(SEEDS_DIR, file), "utf8");
-		await pool.query(sql);
+		await getPool().query(sql);
 		console.log(`seed  ${file}`);
 	}
 }
@@ -21,7 +21,7 @@ async function seedAccounts() {
 	const seedAuth = betterAuth(authOptions());
 
 	for (const account of SEED_ACCOUNTS) {
-		const existing = await pool.query('SELECT id FROM "user" WHERE lower(email) = lower($1)', [
+		const existing = await getPool().query('SELECT id FROM "user" WHERE lower(email) = lower($1)', [
 			account.email,
 		]);
 
@@ -42,7 +42,7 @@ async function seedAccounts() {
 			console.log(`user  ${account.email} (exists)`);
 		}
 
-		await pool.query(
+		await getPool().query(
 			'UPDATE "user" SET role = $1, zone = $2, phone = $3, "isActive" = true, "emailVerified" = true WHERE lower(email) = lower($4)',
 			[account.role, account.zone, account.phone, account.email],
 		);
@@ -52,12 +52,12 @@ async function seedAccounts() {
 async function main() {
 	await runSeedSql();
 	await seedAccounts();
-	await pool.end();
+	await getPool().end();
 	console.log("Seed ready.");
 }
 
 main().catch(async (error) => {
 	console.error(error);
-	await pool.end().catch(() => {});
+	await getPool().end().catch(() => {});
 	process.exit(1);
 });

@@ -3,38 +3,40 @@ import { Pool, type QueryResultRow } from "pg";
 /**
  * Single Postgres pool for the whole server process.
  *
- * Cached on globalThis so Next.js dev hot-reloads do not leak connections.
- * `pg` reads sslmode from DATABASE_URL (Neon requires TLS).
+ * The pool is created lazily and cached on globalThis so Next.js dev
+ * hot-reloads do not leak connections. Constructing it does not open a
+ * socket, which keeps `next build` working without database credentials;
+ * `query()` and `getPool()` validate the env when they are actually used.
  */
 const globalForDb = globalThis as unknown as { __whmPool?: Pool };
 
-function createPool(): Pool {
-	const connectionString = process.env.DATABASE_URL;
-	if (!connectionString) {
-		throw new Error(
-			"DATABASE_URL is not set. Copy .env.example to .env.local and add your Neon connection string.",
-		);
-	}
+export function getPool(): Pool {
+	if (globalForDb.__whmPool) return globalForDb.__whmPool;
 
-	return new Pool({
-		connectionString,
+	globalForDb.__whmPool = new Pool({
+		connectionString: process.env.DATABASE_URL,
 		max: 5,
 		idleTimeoutMillis: 30_000,
 		connectionTimeoutMillis: 10_000,
 	});
+
+	return globalForDb.__whmPool;
 }
 
-export const pool: Pool = globalForDb.__whmPool ?? createPool();
-
-if (process.env.NODE_ENV !== "production") {
-	globalForDb.__whmPool = pool;
+function assertDatabaseUrl(): void {
+	if (!process.env.DATABASE_URL) {
+		throw new Error(
+			"DATABASE_URL is not set. Copy .env.example to .env.local and add your Neon connection string.",
+		);
+	}
 }
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
 	text: string,
 	params: unknown[] = [],
 ): Promise<T[]> {
-	const result = await pool.query<T>(text, params);
+	assertDatabaseUrl();
+	const result = await getPool().query<T>(text, params);
 	return result.rows;
 }
 

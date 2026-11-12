@@ -1,39 +1,38 @@
-/** Allowlisted writable columns per table. Anything else in a request body is dropped. */
-export const TABLE_COLUMNS = {
-	products: ["sku", "name", "category", "stock", "min_stock", "location", "price"],
-	customers: ["code", "name", "type", "email", "phone", "status"],
-	orders: [
-		"order_number",
-		"customer_name",
-		"customer_id",
-		"status",
-		"priority",
-		"total_items",
-		"total_value",
-	],
-	picking: [
-		"task_number",
-		"order_number",
-		"order_id",
-		"assigned_to",
-		"staff_id",
-		"zone",
-		"status",
-		"total_items",
-		"picked_items",
-	],
-	staff: ["name", "role", "zone", "status"],
-} as const satisfies Record<string, readonly string[]>;
+import { getTableColumns } from "drizzle-orm";
+import { customers, orders, picking, products, staff } from "./schema";
 
-export type TableName = keyof typeof TABLE_COLUMNS;
+export const TABLE_MAP = {
+	products,
+	customers,
+	orders,
+	picking,
+	staff,
+} as const;
+
+export type TableName = keyof typeof TABLE_MAP;
+
+const READ_ONLY_COLUMNS = new Set(["id", "slug", "created_at", "updated_at"]);
+
+/** Writable columns per table, derived from the Drizzle schema. */
+export const TABLE_COLUMNS = Object.fromEntries(
+	Object.entries(TABLE_MAP).map(([name, table]) => [
+		name,
+		Object.keys(getTableColumns(table)).filter((column) => !READ_ONLY_COLUMNS.has(column)),
+	]),
+) as Record<TableName, string[]>;
 
 export function assertTable(table: string): TableName {
-	if (!Object.hasOwn(TABLE_COLUMNS, table)) {
+	if (!Object.hasOwn(TABLE_MAP, table)) {
 		throw new Error(`Tabla no permitida: ${table}`);
 	}
 	return table as TableName;
 }
 
+export function getTable(table: TableName) {
+	return TABLE_MAP[table];
+}
+
+/** UI/API bodies are camelCase; the database is snake_case. */
 export function mapToSnakeCase(body: Record<string, unknown>): Record<string, unknown> {
 	const {
 		minStock,
@@ -65,7 +64,8 @@ export function mapToSnakeCase(body: Record<string, unknown>): Record<string, un
 
 /** Normalizes a body to allowlisted snake_case columns with undefined values removed. */
 export function pickColumns(table: string, body: Record<string, unknown>): Record<string, unknown> {
-	const allowed: readonly string[] = TABLE_COLUMNS[assertTable(table)];
+	const safeTable = assertTable(table);
+	const allowed = TABLE_COLUMNS[safeTable];
 	const mapped = mapToSnakeCase(body);
 
 	return Object.fromEntries(

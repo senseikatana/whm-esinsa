@@ -24,6 +24,13 @@ tablas `auth.*`: Better Auth crea y administra `user`, `session`, `account` y
 3. `useSession()` hidrata el contexto y `App.tsx` muestra el dashboard.
 4. Cada route handler valida la sesión contra la base antes de tocar datos.
 
+## Registro público
+
+- `minPasswordLength` es 8.
+- Las cuentas nuevas nacen con rol `viewer`.
+- `DISABLE_PUBLIC_SIGNUP=true` cierra el registro; los usuarios se crean por
+  `db:seed` o directamente en la base.
+
 ## Roles
 
 Los roles válidos son `admin`, `manager`, `supervisor`, `operator`, `picker` y

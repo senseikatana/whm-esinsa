@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "../../lib/api-auth";
-import { pool } from "../../lib/db";
+import { db } from "../../lib/drizzle";
 import { MAX_FILE_BYTES } from "../../lib/file-limits";
+import { files } from "../../lib/schema";
 
 function sanitizeName(name: string): string {
 	return name
@@ -50,11 +51,13 @@ export async function POST(request: Request) {
 		const key = `${user.id}/${crypto.randomUUID()}-${sanitizeName(file.name || "file")}`;
 		const data = Buffer.from(await file.arrayBuffer());
 
-		await pool.query(
-			`INSERT INTO files (key, content_type, size, data, uploaded_by)
-			 VALUES ($1, $2, $3, $4, $5)`,
-			[key, file.type || "application/octet-stream", file.size, data, user.id],
-		);
+		await db.insert(files).values({
+			key,
+			content_type: file.type || "application/octet-stream",
+			size: file.size,
+			data,
+			uploaded_by: user.id,
+		});
 
 		return NextResponse.json({
 			success: true,

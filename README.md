@@ -24,6 +24,7 @@ WarehouseFlow cubre las operaciones de un almacén:
 | Framework | Next.js 16.4 (App Router, React Compiler) |
 | UI | React 19.3, Tailwind CSS 4, Lucide Icons |
 | Base de datos | Neon Postgres 17 (driver `pg`) |
+| ORM | Drizzle ORM 0.45 + drizzle-kit |
 | Autenticación | Better Auth 1.7 (email/password + Google + GitHub) |
 | Almacenamiento | Adjuntos en Postgres (`files`), intercambiable por R2/S3 |
 | Lenguaje | TypeScript 7 |
@@ -58,7 +59,9 @@ La app queda en `http://localhost:3000`.
 | `DATABASE_URL` | Connection string de Neon (pooled) | Sí |
 | `BETTER_AUTH_SECRET` | Secreto de Better Auth (`openssl rand -base64 32`) | Sí |
 | `BETTER_AUTH_URL` | URL pública base de la app | Sí |
+| `DATABASE_URL_UNPOOLED` | Endpoint directo para migraciones/DDL | No |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | Orígenes extra separados por coma | No |
+| `DISABLE_PUBLIC_SIGNUP` | `true` cierra el registro público | No |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth de Google | No |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | OAuth de GitHub | No |
 
@@ -76,8 +79,11 @@ nub run format         # Biome format
 nub run check          # Biome check
 nub run db:setup       # Auth tables + esquema + seeds + usuarios demo
 nub run db:auth:migrate# Solo tablas de Better Auth
-nub run db:migrate     # Solo db/migrations/*.sql
+nub run db:migrate     # Solo db/migrations/*.sql (usa DATABASE_URL_UNPOOLED)
 nub run db:seed        # Solo seeds + usuarios demo (idempotente)
+nub run env:check      # Valida env vars, conexión y tablas
+nub run db:studio      # Drizzle Studio
+nub run db:generate    # Genera SQL nuevo desde app/lib/schema.ts
 ```
 
 ## Estructura del proyecto
@@ -91,6 +97,7 @@ nub run db:seed        # Solo seeds + usuarios demo (idempotente)
 │   │   ├── auth/[...all]/         # Handler de Better Auth
 │   │   ├── auth-config/           # Proveedores OAuth habilitados
 │   │   ├── files/                 # Subida/descarga de adjuntos
+│   │   ├── staff/                 # CRUD de personal
 │   │   └── {products,customers,orders,picking-tasks}/  # CRUD
 │   ├── components/                # UI modular (CrudView, dashboard, etc.)
 │   ├── lib/
@@ -99,8 +106,12 @@ nub run db:seed        # Solo seeds + usuarios demo (idempotente)
 │   │   ├── auth-client.ts         # Cliente React de Better Auth
 │   │   ├── auth-context.tsx       # Provider de sesión
 │   │   ├── api-auth.ts            # Guardas de sesión/roles
-│   │   ├── db.ts                  # Pool de Postgres
-│   │   ├── table-columns.ts       # Allowlist de columnas por tabla
+│   │   ├── db.ts                  # Pool de Postgres (lazy)
+│   │   ├── drizzle.ts             # Cliente Drizzle
+│   │   ├── schema.ts              # Tablas tipadas (WMS + Better Auth)
+│   │   ├── tables.ts              # Mapa/allowlist de tablas
+│   │   ├── repositories/          # Consultas Drizzle reutilizables
+│   │   ├── env.ts                 # Validación de entorno
 │   │   └── seeds/                 # Datos semilla y cuentas demo
 │   └── utils/
 ├── db/
@@ -135,6 +146,24 @@ Cada archivo de `db/migrations/*.sql` se aplica una sola vez y queda registrado 
 ```bash
 nub run db:migrate
 ```
+
+### ORM
+
+`app/lib/schema.ts` define las tablas con Drizzle (WMS + Better Auth) y
+`app/lib/repositories/crud.ts` centraliza las consultas. Los route handlers y
+GraphQL no escriben SQL a mano.
+
+```bash
+nub run db:studio      # explorar datos
+nub run db:generate    # generar una migración desde schema.ts
+```
+
+Las migraciones aplicadas siguen viviendo en `db/migrations/`; Drizzle Kit es
+para evolucionar el esquema, no para recrear la base existente.
+
+> La primera vez que corras `db:generate` no hay snapshot: Drizzle genera el
+> esquema completo. No apliques ese baseline sobre una base que ya tiene tablas;
+> usalo como referencia y versioná el cambio real en `db/migrations/`.
 
 ## Autenticación
 

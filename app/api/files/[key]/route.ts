@@ -1,7 +1,9 @@
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "../../../lib/api-auth";
-import { pool } from "../../../lib/db";
+import { db } from "../../../lib/drizzle";
 import { INLINE_SAFE_TYPES } from "../../../lib/file-limits";
+import { files } from "../../../lib/schema";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ key: string }> }) {
 	try {
@@ -10,10 +12,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ key
 			return NextResponse.json({ success: false, error: "Sesión requerida" }, { status: 401 });
 
 		const { key } = await params;
-		const { rows } = await pool.query("SELECT content_type, data FROM files WHERE key = $1 LIMIT 1", [
-			key,
-		]);
-		const file = rows[0];
+		const [file] = await db
+			.select({ content_type: files.content_type, data: files.data })
+			.from(files)
+			.where(eq(files.key, key))
+			.limit(1);
+
 		if (!file) {
 			return NextResponse.json({ success: false, error: "Archivo no encontrado" }, { status: 404 });
 		}
@@ -22,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ key
 		const inline = INLINE_SAFE_TYPES.has(file.content_type);
 		const contentType = inline ? file.content_type : "application/octet-stream";
 
-		return new Response(file.data, {
+		return new Response(new Uint8Array(file.data), {
 			headers: {
 				"Content-Type": contentType,
 				"Content-Disposition": `${inline ? "inline" : "attachment"}; filename="file"`,
@@ -46,12 +50,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 		}
 
 		const { key } = await params;
-		const { rowCount } = await pool.query(
-			"DELETE FROM files WHERE key = $1 AND (uploaded_by = $2 OR $3 = 'admin')",
-			[key, user.id, user.role],
-		);
+		const ownership =
+			user.role === "admin"
+				? eq(files.key, key)
+				: and(eq(files.key, key), eq(files.uploaded_by, user.id));
 
-		if (!rowCount) {
+		const deleted = await db.delete(files).where(ownership).returning({ key: files.key });
+
+		if (deleted.length === 0) {
 			return NextResponse.json(
 				{ success: false, error: "Archivo no encontrado o sin permisos" },
 				{ status: 404 },
