@@ -40,7 +40,7 @@ import {
 import { SEED_CUSTOMERS, SEED_ORDERS, SEED_PICKING, SEED_PRODUCTS, SEED_STAFF } from "./lib/seeds";
 
 // initial mock/fallback data derived from the canonical seed datasets in
-// app/lib/seeds/* (kept in sync with the InsForge tables through migrations)
+// app/lib/seeds/* (kept in sync with the Neon tables through db/seeds/*.sql)
 const PRODUCT_CATEGORIES: string[] = [
 	"Espirometálicas",
 	"Grafito Puro",
@@ -288,6 +288,15 @@ export default function App() {
 
 	const [loading, setLoading] = useState<boolean>(false);
 
+	// Entity → REST collection
+	const ENTITY_ENDPOINTS: Record<string, string> = {
+		products: "/products",
+		customers: "/customers",
+		orders: "/orders",
+		picking: "/picking-tasks",
+		staff: "/staff",
+	};
+
 	// AI Modal Configuration — SSR-safe: init with stable defaults,
 	// read localStorage only in useEffect after hydration.
 	const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -343,10 +352,12 @@ export default function App() {
 		}
 	}, []);
 
-	// Load data once on mount
+	// Load data once the session exists. Running before login would hit
+	// /api/* without the session cookie and leave the UI on seed data.
 	useEffect(() => {
+		if (!user) return;
 		loadData();
-	}, [loadData]);
+	}, [user, loadData]);
 
 	// Inbound = recepciones (REC-*); everything else is an outbound pedido.
 	const filteredInOrders = useMemo(() => {
@@ -361,11 +372,7 @@ export default function App() {
 	const handleSave = async (entity: string, data: any, id: number | null) => {
 		setLoading(true);
 		try {
-			let endpoint = "";
-			if (entity === "products") endpoint = "/products";
-			else if (entity === "customers") endpoint = "/customers";
-			else if (entity === "orders") endpoint = "/orders";
-			else if (entity === "picking") endpoint = "/picking-tasks";
+			const endpoint = ENTITY_ENDPOINTS[entity] ?? "";
 
 			if (isBackendConnected && endpoint) {
 				const method = id ? "PUT" : "POST";
@@ -421,11 +428,7 @@ export default function App() {
 	const handleDelete = async (entity: string, id: number) => {
 		setLoading(true);
 		try {
-			let endpoint = "";
-			if (entity === "products") endpoint = "/products";
-			else if (entity === "customers") endpoint = "/customers";
-			else if (entity === "orders") endpoint = "/orders";
-			else if (entity === "picking") endpoint = "/picking-tasks";
+			const endpoint = ENTITY_ENDPOINTS[entity] ?? "";
 
 			if (isBackendConnected && endpoint) {
 				const res = await fetch(withBasePath(`/api${endpoint}/${id}`), { method: "DELETE" });
@@ -453,14 +456,27 @@ export default function App() {
 	// Handle Batch Deletes
 	const handleBatchDelete = async (entity: string, ids: number[]) => {
 		setLoading(true);
-		setDbState((prev) => {
-			const targetList = (prev as any)[entity];
-			return {
-				...prev,
-				[entity]: targetList.filter((item: any) => !ids.includes(item.id)),
-			};
-		});
-		setLoading(false);
+		try {
+			const endpoint = ENTITY_ENDPOINTS[entity] ?? "";
+
+			if (isBackendConnected && endpoint && ids.length > 0) {
+				await Promise.all(
+					ids.map((id) => fetch(withBasePath(`/api${endpoint}/${id}`), { method: "DELETE" })),
+				);
+				await loadData();
+				return;
+			}
+
+			setDbState((prev) => {
+				const targetList = (prev as any)[entity];
+				return {
+					...prev,
+					[entity]: targetList.filter((item: any) => !ids.includes(item.id)),
+				};
+			});
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	// AI Lote mock generator
@@ -644,7 +660,7 @@ export default function App() {
 							aria-hidden="true"
 						/>
 						<span className="hidden md:inline">
-							{isBackendConnected ? "Servidor SQLite" : "Mock Offline"}
+							{isBackendConnected ? "Neon Postgres" : "Mock Offline"}
 						</span>
 					</div>
 

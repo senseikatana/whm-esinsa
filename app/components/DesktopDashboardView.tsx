@@ -75,8 +75,8 @@ export default function DesktopDashboardView({
 					</div>
 					<h3 className="text-lg font-bold text-white mb-2">Sin datos disponibles</h3>
 					<p className="text-sm text-slate-400 max-w-md mb-6">
-						Conecta tu base de datos InsForge o genera datos mock en cada módulo para comenzar a ver el
-						dashboard operativo.
+						Conecta Neon Postgres o genera datos mock en cada módulo para comenzar a ver el dashboard
+						operativo.
 					</p>
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
 						<div className="flex flex-col items-center gap-2 p-4 bg-[#050811] rounded-xl border border-slate-800">

@@ -1,7 +1,12 @@
+import { withWriteAuth } from "../../../lib/api-auth";
 import { handleDelete, handlePut } from "../../helper";
 
-export const PUT = (request: Request, { params }: { params: Promise<{ id: string }> }) =>
-	params.then(({ id }) => handlePut("products", id, request));
+export const PUT = withWriteAuth(
+	(request: Request, { params }: { params: Promise<{ id: string }> }) =>
+		params.then(({ id }) => handlePut("products", id, request)),
+);
 
-export const DELETE = (_request: Request, { params }: { params: Promise<{ id: string }> }) =>
-	params.then(({ id }) => handleDelete("products", id));
+export const DELETE = withWriteAuth(
+	(_request: Request, { params }: { params: Promise<{ id: string }> }) =>
+		params.then(({ id }) => handleDelete("products", id)),
+);

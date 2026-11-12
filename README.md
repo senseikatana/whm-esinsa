@@ -1,13 +1,13 @@
 # WarehouseFlow SGA
 
-Sistema de Gestión de Almacén (SGA) enterprise construido con Next.js 16, React 19, Tailwind CSS 4 e InsForge como backend.
+Sistema de Gestión de Almacén (SGA) construido con Next.js 16, React 19, Tailwind CSS 4, **Neon Postgres** y **Better Auth**.
 
 ## Descripción
 
-WarehouseFlow es una aplicación web completa para la gestión de operaciones de almacén que incluye:
+WarehouseFlow cubre las operaciones de un almacén:
 
-- **Dashboard operativo** con KPIs en tiempo real
-- **Gestión de inventario** con clases ABC y ubicaciones
+- **Dashboard operativo** con KPIs
+- **Gestión de inventario** con ubicaciones
 - **Recepción y expedición** de mercancía
 - **Picking por voz** guiado por IA
 - **Gestión de rutas** internas
@@ -21,127 +21,119 @@ WarehouseFlow es una aplicación web completa para la gestión de operaciones de
 
 | Capa | Tecnología |
 |------|------------|
-| Framework | Next.js 16.2 (App Router) |
-| UI | React 19.2, Tailwind CSS 4, Lucide Icons |
-| Backend | InsForge (PostgreSQL, Auth, Storage) |
-| Lenguaje | TypeScript 5.9 |
-| Linting | Biome 2.5 |
-| Package Manager | Bun |
-| IA | Gemini API (opcional) |
+| Framework | Next.js 16.4 (App Router, React Compiler) |
+| UI | React 19.3, Tailwind CSS 4, Lucide Icons |
+| Base de datos | Neon Postgres 17 (driver `pg`) |
+| Autenticación | Better Auth 1.7 (email/password + Google + GitHub) |
+| Almacenamiento | Adjuntos en Postgres (`files`), intercambiable por R2/S3 |
+| Lenguaje | TypeScript 7 |
+| Linting | Biome 2.6 |
+| Package Manager | Nub 0.10 |
+| IA | DeepSeek API (opcional, clave por usuario) |
 
 ## Requisitos previos
 
-- [Bun](https://bun.sh/) ≥ 1.0
-- [InsForge CLI](https://insforge.dev) (para gestión del backend)
-- Node.js ≥ 18 (para InsForge CLI)
+- [Nub](https://nubjs.com) ≥ 0.10 (o Bun ≥ 1.0)
+- Un proyecto de [Neon](https://neon.tech) (o cualquier Postgres 15+)
 
 ## Instalación
 
 ```bash
-# Clonar el repositorio
-git clone <repo-url>
-cd whm-withnext
-
-# Instalar dependencias
-bun install
-
-# Configurar variables de entorno
+nub install
 cp .env.example .env.local
-# Editar .env.local con tus credenciales de InsForge
+# Editar .env.local: DATABASE_URL y BETTER_AUTH_SECRET
 
-# Ejecutar en desarrollo
-bun dev
+# Crea las tablas de Better Auth, el esquema del WMS y los datos demo
+nub run db:setup
+
+nub run dev
 ```
+
+La app queda en `http://localhost:3000`.
 
 ## Variables de entorno
 
 | Variable | Descripción | Requerida |
 |----------|-------------|-----------|
-| `NEXT_PUBLIC_INSFORGE_URL` | URL del proyecto InsForge | Sí |
-| `NEXT_PUBLIC_INSFORGE_ANON_KEY` | Anon key de InsForge | Sí |
+| `DATABASE_URL` | Connection string de Neon (pooled) | Sí |
+| `BETTER_AUTH_SECRET` | Secreto de Better Auth (`openssl rand -base64 32`) | Sí |
+| `BETTER_AUTH_URL` | URL pública base de la app | Sí |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | Orígenes extra separados por coma | No |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth de Google | No |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | OAuth de GitHub | No |
+
+Si un proveedor OAuth no tiene credenciales, su botón aparece deshabilitado en el login.
 
 ## Scripts disponibles
 
 ```bash
-bun dev          # Servidor de desarrollo
-bun build        # Build de producción
-bun start        # Servidor de producción
-bun lint         # Verificar errores con Biome
-bun lint:fix     # Corregir errores automáticamente
-bun format       # Verificar formato
-bun format:fix   # Corregir formato automáticamente
-bun check        # Verificar lint + formato
-bun check:fix    # Corregir todo automáticamente
+nub run dev            # Servidor de desarrollo
+nub run build          # Build de producción
+nub run start          # Servidor de producción
+nub run lint           # Biome lint
+nub run lint:fix       # Biome lint --write
+nub run format         # Biome format
+nub run check          # Biome check
+nub run db:setup       # Auth tables + esquema + seeds + usuarios demo
+nub run db:auth:migrate# Solo tablas de Better Auth
+nub run db:migrate     # Solo db/migrations/*.sql
+nub run db:seed        # Solo seeds + usuarios demo (idempotente)
 ```
 
 ## Estructura del proyecto
 
 ```
-whm-withnext/
+.
 ├── app/
-│   ├── App.tsx                    # Componente principal de la aplicación
-│   ├── page.tsx                   # Entry point (Next.js)
-│   ├── layout.tsx                 # Layout raíz
-│   ├── globals.css                # Estilos globales (Tailwind)
-│   ├── components/                # Componentes UI modulares
-│   │   ├── CrudView.tsx           # Tabla CRUD genérica con filtros y batch delete
-│   │   ├── DesktopDashboardView.tsx # Dashboard principal
-│   │   ├── KpiCard.tsx            # Tarjeta de KPI
-│   │   ├── SidebarItem.tsx        # Item del sidebar
-│   │   ├── VoicePickingView.tsx   # Picking guiado por voz
-│   │   ├── RoutesView.tsx         # Gestión de rutas
-│   │   ├── WhatsAppAgentView.tsx  # Agente WhatsApp IA
-│   │   ├── SapIntegrationView.tsx # Integración SAP
-│   │   └── MobileAppSimulator.tsx # Simulador PDA
-│   ├── lib/                       # Lógica de negocio
-│   │   ├── insforge.ts            # Cliente InsForge SDK
-│   │   ├── seeds/                 # Datos semilla
-│   │   │   ├── products.ts
-│   │   │   ├── customers.ts
-│   │   │   ├── orders.ts
-│   │   │   ├── picking.ts
-│   │   │   └── staff.ts
-│   │   └── services/              # Servicios CRUD
-│   │       ├── base.ts            # Servicio base genérico
-│   │       ├── products.ts
-│   │       ├── customers.ts
-│   │       ├── orders.ts
-│   │       ├── picking.ts
-│   │       └── staff.ts
-│   └── utils/                     # Utilidades
-│       ├── ai-api.ts              # Helper de IA (Gemini / DeepSeek)
-│       └── sku-generator.ts       # Generador de SKUs
-├── migrations/                    # Migraciones de base de datos
-├── public/                        # Assets estáticos
-├── biome.json                     # Configuración de Biome
-├── postcss.config.mjs             # Configuración de PostCSS
-├── tsconfig.json                  # Configuración de TypeScript
-└── package.json
+│   ├── App.tsx                    # Componente principal (cliente)
+│   ├── page.tsx / layout.tsx      # Entry point y layout raíz
+│   ├── api/
+│   │   ├── auth/[...all]/         # Handler de Better Auth
+│   │   ├── auth-config/           # Proveedores OAuth habilitados
+│   │   ├── files/                 # Subida/descarga de adjuntos
+│   │   └── {products,customers,orders,picking-tasks}/  # CRUD
+│   ├── components/                # UI modular (CrudView, dashboard, etc.)
+│   ├── lib/
+│   │   ├── auth.ts                # Instancia server de Better Auth
+│   │   ├── auth-options.ts        # Config compartida (server y scripts)
+│   │   ├── auth-client.ts         # Cliente React de Better Auth
+│   │   ├── auth-context.tsx       # Provider de sesión
+│   │   ├── api-auth.ts            # Guardas de sesión/roles
+│   │   ├── db.ts                  # Pool de Postgres
+│   │   ├── table-columns.ts       # Allowlist de columnas por tabla
+│   │   └── seeds/                 # Datos semilla y cuentas demo
+│   └── utils/
+├── db/
+│   ├── migrations/                # Esquema propio (0001, 0002...)
+│   └── seeds/                     # Catálogo y backfills
+├── scripts/
+│   ├── db-migrate.ts              # Runner de migraciones
+│   └── seed.ts                    # Seeds + usuarios demo
+└── docs/
 ```
 
 ## Base de datos
 
-El proyecto usa InsForge (PostgreSQL) con las siguientes tablas:
+Tablas propias:
 
 | Tabla | Descripción |
 |-------|-------------|
-| `products` | Inventario de productos con SKU, stock y ubicación |
-| `customers` | Clientes y proveedores |
-| `orders` | Órdenes de entrada (recepción) y salida (expedición) |
-| `picking` | Tareas de picking asignadas a operarios |
-| `staff` | Personal del almacén y sus roles |
+| `products` | Inventario con SKU, stock y ubicación |
+| `customers` | Clientes, proveedores y transportistas |
+| `orders` | Órdenes de entrada (REC-*) y salida (PED-*) |
+| `picking` | Tareas de picking asignadas |
+| `staff` | Personal del almacén |
+| `files` | Adjuntos (5 MB máximo por archivo) |
+| `user_profiles` | Vista sobre la tabla `user` de Better Auth |
+
+Better Auth administra `user`, `session`, `account` y `verification`.
 
 ### Migraciones
 
+Cada archivo de `db/migrations/*.sql` se aplica una sola vez y queda registrado en `schema_migrations`:
+
 ```bash
-# Crear nueva migración
-bunx @insforge/cli db migrations new <nombre>
-
-# Aplicar migraciones pendientes
-bunx @insforge/cli db migrations up --all
-
-# Ejecutar query directa
-bunx @insforge/cli db query "SELECT * FROM products"
+nub run db:migrate
 ```
 
 ## Autenticación
@@ -150,11 +142,13 @@ bunx @insforge/cli db query "SELECT * FROM products"
 
 | Método | Descripción |
 |--------|-------------|
-| Email/Password | Login tradicional con email y contraseña |
+| Email/Password | Sesión httpOnly con Better Auth |
 | Google OAuth | Login con cuenta de Google |
 | GitHub OAuth | Login con cuenta de GitHub |
 
 ### Usuarios de prueba
+
+Creados por `nub run db:seed`:
 
 | Email | Contraseña | Rol |
 |-------|------------|-----|
@@ -165,122 +159,49 @@ bunx @insforge/cli db query "SELECT * FROM products"
 | picker1@esinsa.com | picker123 | Picker |
 | viewer@esinsa.com | viewer123 | Visor |
 
+Las cuentas se registran automáticamente con rol `viewer` (solo lectura); el rol se administra en la base de datos, nunca desde el cliente.
+
 ### Roles y permisos
 
 | Rol | Descripción | Permisos |
 |-----|-------------|----------|
-| `admin` | Administrador | Acceso total al sistema |
-| `manager` | Gerente | Gestión operativa, reportes |
-| `supervisor` | Supervisor | Supervisión de operaciones y personal |
+| `admin` | Administrador | Acceso total |
+| `manager` | Gerente | Operación y reportes |
+| `supervisor` | Supervisor | Operaciones y personal |
 | `operator` | Operario | Inventario, recepciones, expediciones |
-| `picker` | Picker | Solo picking |
-| `viewer` | Visor | Solo lectura del dashboard |
+| `picker` | Picker | Picking |
+| `viewer` | Visor | Solo lectura (la API rechaza escrituras) |
 
 ### Configurar OAuth
 
-Para habilitar Google y GitHub OAuth:
+**Google** (Google Cloud Console → Credentials → OAuth client):
 
-1. Ve al dashboard de InsForge → **Authentication → Providers**
-2. Habilita **Google** y **GitHub**
-3. Configura los Client ID y Client Secret de cada provider
-4. Las redirect URIs deben incluir:
-   - `https://8cc79ec9.ap-southeast.insforge.app/auth/callback/google`
-   - `https://whm.senseikatana.com/auth/callback/google`
-   - `https://8cc79ec9.ap-southeast.insforge.app/auth/callback/github`
-   - `https://whm.senseikatana.com/auth/callback/github`
+- Authorized redirect URI: `https://<tu-dominio>/api/auth/callback/google`
 
-## CI/CD
+**GitHub** (Settings → Developer settings → OAuth Apps):
 
-### GitHub Actions
+- Authorization callback URL: `https://<tu-dominio>/api/auth/callback/github`
 
-El proyecto usa GitHub Actions para CI/CD automático. En cada push a `main`:
-
-1. **Lint & Build** — verifica que el código pasa Biome y compila
-2. **Deploy to InsForge** — despliega el frontend
-3. **Deploy Cloudflare Worker** — despliega el proxy
-
-### Configurar secrets de GitHub
-
-Ve a **Settings → Secrets and variables → Actions** y añade:
-
-| Secret | Descripción |
-|--------|-------------|
-| `NEXT_PUBLIC_INSFORGE_URL` | URL de InsForge (`https://8cc79ec9.ap-southeast.insforge.app`) |
-| `NEXT_PUBLIC_INSFORGE_ANON_KEY` | Anon key de InsForge |
-| `INSFORGE_ACCESS_TOKEN` | Token de acceso de InsForge |
-| `CLOUDFLARE_API_TOKEN` | API token de Cloudflare |
-| `CLOUDFLARE_ACCOUNT_ID` | Account ID de Cloudflare |
-
-### Obtener tokens
-
-```bash
-# InsForge access token
-npx -y @insforge/cli@latest secrets get API_KEY
-
-# Cloudflare: ve a dash.cloudflare.com → My Profile → API Tokens
-```
-
-### Flujo
-
-```
-Push / PR        → GitHub Actions → Lint + Build (sin deploy)
-Manual dispatch  → GitHub Actions → Lint + Build → Deploy InsForge + Worker
-```
-
-Los deploys automáticos quedaron deshabilitados hasta que el repo tenga los secrets `INSFORGE_ACCESS_TOKEN` y `CLOUDFLARE_API_TOKEN`. Por ahora se lanzan a mano:
-
-```bash
-gh workflow run deploy.yml -R senseikatana/whm-admin
-```
+Luego cargá `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID` y `GITHUB_CLIENT_SECRET` en el entorno del servidor y reiniciá. Para local usar `http://localhost:3000/api/auth/callback/{provider}`.
 
 ## Despliegue
 
-### Scripts disponibles
+Recomendado: **Vercel** (o cualquier host Node) + Neon.
 
-```bash
-bun run build          # Build de producción
-bun run db:deploy      # Desplegar frontend a InsForge
-bun run worker:deploy  # Desplegar Worker a Cloudflare
-bun run deploy         # Build + Worker en paralelo
-bun run deploy:full    # InsForge + Worker en paralelo
-```
+1. Importá el repo en Vercel.
+2. Configurá `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` y, si aplica, las credenciales OAuth.
+3. Ejecutá `nub run db:setup` una vez contra la base de producción (o `db:migrate` + `db:seed`).
+4. Agregá el dominio de producción como `BETTER_AUTH_URL` y en `BETTER_AUTH_TRUSTED_ORIGINS`.
 
-### ⚠️ Importante: NO usar domains attach
-
-La app se sirve en `https://whm.senseikatana.com` mediante el Cloudflare Worker `whm-withnext-proxy` (upstream `https://8cc79ec9.insforge.site`). **NO ejecutar** estos comandos porque sobreescriben los registros DNS y rompen el Worker:
-
-```bash
-# ❌ NO USAR - Sobreescribe DNS del Worker
-npx @insforge/cli domains attach senseikatana.com
-npx @insforge/cli domains dns sync senseikatana.com
-```
-
-### Flujo de deploy correcto
-
-```bash
-# 1. Deploy del frontend a InsForge
-bun run db:deploy
-
-# 2. Deploy del Worker a Cloudflare
-bun run worker:deploy
-```
-
-| Email | Contraseña | Rol |
-| --- | --- | --- |
-| admin@esinsa.com | admin123 | Administrador |
-| gerente@esinsa.com | gerente123 | Gerente |
-| supervisor@esinsa.com | super123 | Supervisor |
-| operario1@esinsa.com | opera123 | Operario |
-| picker1@esinsa.com | picker123 | Picker |
-| viewer@esinsa.com | viewer123 | Visor |
+> El proyecto Neon creado desde el agente es *claimable*: hay que reclamarlo desde el dashboard de Neon antes de que expire. Al reclamarlo, Neon rota la `DATABASE_URL`; actualizá el entorno con la nueva.
 
 ## Contribuir
 
-Ver [CONTRIBUTING.md](./CONTRIBUTING.md) para las guías de contribución.
+Ver [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Changelog
 
-Ver [CHANGELOG.md](./CHANGELOG.md) para el historial de cambios.
+Ver [CHANGELOG.md](./CHANGELOG.md).
 
 ## Licencia
 

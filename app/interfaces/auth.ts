@@ -1,8 +1,11 @@
 // ==================== Auth ====================
+export type UserRole = "admin" | "manager" | "supervisor" | "operator" | "picker" | "viewer";
+
 export interface AuthUser {
 	id: string;
 	email: string;
 	name?: string;
+	role?: UserRole;
 }
 
 export interface AuthResult {

@@ -42,9 +42,3 @@ INSERT INTO picking (task_number, order_number, assigned_to, zone, status, total
   ('PICK-003', 'PED-2026-003', 'Carlos Ruiz', 'C', 'Pendiente', 2, 0)
 ON CONFLICT (task_number) DO NOTHING;
 
--- Staff / Operators
-INSERT INTO staff (name, role, zone, status) VALUES
-  ('Juan García', 'Administrador', 'Oficina', 'Activo'),
-  ('María López', 'Operario', 'Zona B', 'En Ruta'),
-  ('Carlos Ruiz', 'Operario', 'Zona A', 'Activo'),
-  ('Ana Martínez', 'Operario', 'Zona C', 'Inactivo');

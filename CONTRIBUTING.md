@@ -4,7 +4,7 @@ Gracias por tu interés en contribuir a este proyecto. Esta guía te ayudará a 
 
 ## Requisitos
 
-- [Bun](https://bun.sh/) ≥ 1.0
+- [Nub](https://nubjs.com) ≥ 0.10 (o Bun ≥ 1.0)
 - [InsForge CLI](https://insforge.dev)
 - Acceso al proyecto InsForge (contacta al admin)
 
@@ -16,7 +16,7 @@ git clone <tu-fork>
 cd whm-withnext
 
 # 2. Instalar dependencias
-bun install
+nub install
 
 # 3. Configurar InsForge
 npx @insforge/cli login
@@ -27,7 +27,7 @@ cp .env.example .env.local
 # Editar con las credenciales de InsForge
 
 # 5. Ejecutar en desarrollo
-bun dev
+nub run dev
 ```
 
 ## Flujo de trabajo
@@ -51,19 +51,19 @@ git checkout -b fix/mi-bugfix
 
 ```bash
 # Verificar lint
-bun lint
+nub run lint
 
 # Verificar formato
-bun format
+nub run format
 
 # Verificar todo
-bun check
+nub run check
 
 # Corregir automáticamente
-bun check:fix
+nub run check:fix
 
 # Build de producción
-bun build
+nub run build
 ```
 
 ### 4. Commits
@@ -84,7 +84,7 @@ chore: actualizar dependencias
 
 - Describe los cambios en la PR
 - Incluye capturas de pantalla si hay cambios UI
-- Asegúrate de que `bun build` pasa sin errores
+- Asegúrate de que `nub run build` pasa sin errores
 - Referencia issues relacionados si existen
 
 ## Convenciones del proyecto
@@ -163,7 +163,7 @@ npx @insforge/cli db migrations up --all
 
 ```bash
 # Corregir automáticamente
-bun check:fix
+nub run check:fix
 
 # Si persiste, revisar biome.json
 ```
@@ -176,7 +176,7 @@ npx tsc --noEmit
 
 # Limpiar cache de Next.js
 rm -rf .next
-bun build
+nub run build
 ```
 
 ### InsForge no conecta

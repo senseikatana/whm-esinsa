@@ -5,6 +5,25 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adherido a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-11-12
+
+### Changed
+
+- Backend migrado de InsForge (caído) a **Neon Postgres 17** con `pg` y pool único (`app/lib/db.ts`).
+- Autenticación migrada a **Better Auth 1.7**: email/password, Google y GitHub; sesión httpOnly de 7 días.
+- CRUD de `products`, `customers`, `orders`, `picking` y `staff` reescrito con SQL parametrizado y allowlist de columnas.
+- Adjuntos (`files`) pasan de object storage de InsForge a tabla Postgres con límite de 5 MB.
+- Esquema y seeds movidos a `db/migrations/` y `db/seeds/`, con runner idempotente (`bun run db:setup`).
+- El login muestra las cuentas demo desde `app/lib/seeds/accounts.ts` y deshabilita los botones OAuth sin credenciales.
+- Todos los route handlers exigen sesión; el rol `viewer` no puede escribir.
+- Eliminados el proxy de Cloudflare y las migraciones/esquema de InsForge.
+
+### Fixed
+
+- El SDK apuntaba a `http://localhost:7130` cuando faltaban las env vars, por eso fallaban login, registro y SSO.
+- Las credenciales de prueba ahora existen de verdad como usuarios de auth.
+- Se silencia el hydration mismatch provocado por extensiones del navegador (`suppressHydrationWarning`).
+
 ## [0.7.0] - 2026-11-12
 
 Highlights: feat: implement warehouse migration scripts and schema changes for warehous, plus 1 more change.

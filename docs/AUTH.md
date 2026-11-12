@@ -1,161 +1,74 @@
-# Autenticación — WarehouseFlow SGA
+# Autenticación
 
-## Roles de usuario
+La app usa **Better Auth 1.7** con Postgres (Neon). No hay SDK de terceros ni
+tablas `auth.*`: Better Auth crea y administra `user`, `session`, `account` y
+`verification` en la misma base.
 
-| Rol | Descripción | Permisos |
-|-----|-------------|----------|
-| `admin` | Administrador | Acceso total |
-| `manager` | Gerente | Gestión operativa, reportes |
-| `supervisor` | Supervisor | Supervisión de operaciones y personal |
-| `operator` | Operario | Inventario, recepciones, expediciones |
-| `picker` | Picker | Solo picking |
-| `viewer` | Visor | Solo lectura del dashboard |
+## Archivos
 
-## Configurar Google SSO
+| Archivo | Rol |
+|---------|-----|
+| `app/lib/auth-options.ts` | Configuración compartida (providers, campos extra, sesión) |
+| `app/lib/auth.ts` | Instancia server con el plugin `nextCookies()` |
+| `app/lib/auth-client.ts` | Cliente React (`useSession`, `signIn`, `signUp`) |
+| `app/lib/auth-context.tsx` | Provider de sesión y traducción de errores |
+| `app/lib/api-auth.ts` | Guardas `withAuth` / `withWriteAuth` para route handlers |
+| `app/api/auth/[...all]/route.ts` | Handler HTTP de Better Auth |
+| `app/api/auth-config/route.ts` | Informa qué providers OAuth están configurados |
 
-### 1. Crear proyecto en Google Cloud Console
+## Flujo
 
-1. Ve a [console.cloud.google.com](https://console.cloud.google.com)
-2. Crea un proyecto nuevo o selecciona uno existente
-3. Ve a **APIs & Services → Credentials**
+1. `signUp.email` crea el usuario con rol `viewer` (el rol es `input: false`,
+   así que un cliente no puede asignarse `admin`).
+2. Better Auth emite una cookie de sesión httpOnly.
+3. `useSession()` hidrata el contexto y `App.tsx` muestra el dashboard.
+4. Cada route handler valida la sesión contra la base antes de tocar datos.
 
-### 2. Crear OAuth 2.0 Client
+## Roles
 
-1. Haz clic en **Create Credentials → OAuth client ID**
-2. Selecciona **Web application**
-3. Configura:
+Los roles válidos son `admin`, `manager`, `supervisor`, `operator`, `picker` y
+`viewer`. El rol vive en `"user".role` y tiene un CHECK en la base.
 
-```
-Name: WarehouseFlow SGA
+`viewer` es de solo lectura: `withWriteAuth` rechaza POST/PUT/DELETE. Las
+pantallas no son un control de seguridad; la API sí.
 
-Authorized JavaScript origins:
-  - https://8cc79ec9.ap-southeast.insforge.app
-  - https://senseikatana.com
+## Usuarios demo
 
-Authorized redirect URIs:
-  - https://8cc79ec9.ap-southeast.insforge.app/auth/callback/google
-  - https://senseikatana.com/auth/callback/google
-```
+`bun run db:seed` crea las cuentas de `app/lib/seeds/accounts.ts` y las marca
+como verificadas. Son las mismas que muestra el login en "Ver credenciales de
+prueba", así que no pueden desincronizarse.
 
-4. Copia el **Client ID** y **Client Secret**
+## Google y GitHub
 
-### 3. Configurar en InsForge
+1. Creá la credencial OAuth en el proveedor.
+2. Redirect URI: `https://<dominio>/api/auth/callback/google` o
+   `https://<dominio>/api/auth/callback/github`.
+3. Cargá las variables `*_CLIENT_ID` / `*_CLIENT_SECRET` en el servidor.
+4. Reiniciá. `/api/auth-config` devuelve `true` para el provider habilitado y el
+   botón se activa solo.
 
-```bash
-# Añadir el provider OAuth
-npx -y @insforge/cli@latest config apply
-```
+Si faltan credenciales, el botón queda deshabilitado con un tooltip. No hay
+fallback silencioso.
 
-O desde el dashboard de InsForge:
-1. Ve a **Authentication → Providers**
-2. Habilita **Google**
-3. Pega el Client ID y Client Secret
-4. Guarda
+## Sesiones
 
-### 4. Probar el login
+- Duración: 7 días, con renovación diaria.
+- Cookie httpOnly + `SameSite=Lax` (default de Better Auth).
+- `BETTER_AUTH_SECRET` debe tener al menos 32 caracteres y rotarse con
+  `BETTER_AUTH_SECRETS` si alguna vez se filtra.
 
-```typescript
-import insforge from "./lib/insforge";
-
-// Login con Google
-const { data, error } = await insforge.auth.signInWithOAuth({
-  provider: "google",
-  redirectTo: "https://whm.senseikatana.com"
-});
-```
-
-## Crear usuarios de prueba
-
-Los usuarios se crean automáticamente al registrarse. Para crear usuarios de prueba:
-
-### Desde el dashboard de InsForge
-
-1. Ve a **Authentication → Users**
-2. Haz clic en **Invite user**
-3. Introduce el email y selecciona el rol
-
-### Desde la CLI
+## Verificación manual
 
 ```bash
-# Crear usuario vía SQL (solo para testing)
-npx -y @insforge/cli@latest db query "
-  INSERT INTO auth.users (email, password, email_verified, profile)
-  VALUES (
-    'admin@esinsa.com',
-    crypt('admin123', gen_salt('bf')),
-    true,
-    '{\"name\": \"Sergio Jurado\"}'::jsonb
-  )
-"
+# Login
+curl -c /tmp/cookies.txt -H 'Content-Type: application/json' \
+  -d '{"email":"admin@esinsa.com","password":"admin123"}' \
+  http://localhost:3000/api/auth/sign-in/email
+
+# Sesión
+curl -b /tmp/cookies.txt http://localhost:3000/api/auth/get-session
+
+# Recurso protegido: 200 con cookie, 401 sin cookie
+curl -b /tmp/cookies.txt http://localhost:3000/api/products
+curl http://localhost:3000/api/products
 ```
-
-### Usuarios de ejemplo
-
-| Email | Contraseña | Rol |
-|-------|------------|-----|
-| admin@esinsa.com | admin123 | admin |
-| gerente@esinsa.com | gerente123 | manager |
-| supervisor@esinsa.com | super123 | supervisor |
-| operario1@esinsa.com | opera123 | operator |
-| picker1@esinsa.com | picker123 | picker |
-| viewer@esinsa.com | viewer123 | viewer |
-
-## Permisos por rol
-
-```typescript
-import { ROLE_PERMISSIONS } from "./lib/seeds/users";
-
-const userRole = "operator";
-const hasAccess = ROLE_PERMISSIONS[userRole].includes("inventory");
-// true
-```
-
-## Proteger rutas
-
-```typescript
-import { useAuth } from "./lib/auth-context";
-
-function ProtectedPage() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <Loader />;
-  if (!user) return <AuthModal isOpen={true} />;
-
-  return <Dashboard />;
-}
-```
-
-## Verificar rol en API routes
-
-```typescript
-import { NextResponse } from "next/server";
-import insforge from "../../lib/insforge";
-
-export async function GET(request: Request) {
-  const { data: { user } } = await insforge.auth.getCurrentUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await insforge.database
-    .from("user_profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // ... lógica del endpoint
-}
-```
-| Email | Contraseña | Rol |
-| --- | --- | --- |
-| admin@esinsa.com | admin123 | Administrador |
-| gerente@esinsa.com | gerente123 | Gerente |
-| supervisor@esinsa.com | super123 | Supervisor |
-| operario1@esinsa.com | opera123 | Operario |
-| picker1@esinsa.com | picker123 | Picker |
-| viewer@esinsa.com | viewer123 | Visor |

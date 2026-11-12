@@ -1,4 +1,5 @@
+import { withAuth, withWriteAuth } from "../../lib/api-auth";
 import { handleGet, handlePost } from "../helper";
 
-export const GET = () => handleGet("products");
-export const POST = (request: Request) => handlePost("products", request);
+export const GET = withAuth(() => handleGet("products"));
+export const POST = withWriteAuth((request: Request) => handlePost("products", request));

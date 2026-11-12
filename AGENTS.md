@@ -1,43 +1,49 @@
 # AGENTS.md
 
-Monorepo with two parallel SGA/WMS implementations. Read the per-stack `AGENTS.md` before working inside `withastro/` or `withnext/`.
+WarehouseFlow SGA — Next.js 16 + React 19 + Neon Postgres + Better Auth.
+Single app at the repository root (the old `withastro/` and `withnext/` split no longer exists).
 
 ## Layout
 
-- `withastro/` — Astro 7 (`output: "static"`, per-page SSR via adapter), React islands only inside `/dashboard`, InsForge as backend. Optional Express + Drizzle + libSQL messaging backend in `server/` (port 8787).
-- `withnext/` — Next.js 16 + React 19 + InsForge, served through the Cloudflare Worker in `withnext/cloudflare-worker/`.
+- `app/` — App Router. The UI is client-side (`app/App.tsx`), route handlers live under `app/api/`.
+- `app/lib/` — auth (Better Auth), Postgres pool, CRUD services, seed data.
+- `db/migrations/` — SQL migrations applied by `scripts/db-migrate.ts`.
+- `db/seeds/` — idempotent demo data applied by `scripts/seed.ts`.
+- `docs/AUTH.md` — auth flow, roles, OAuth setup.
 
-## Commands (run from each project root)
+## Commands
 
-`withastro/`:
+- `nub install` — Nub is the package manager (`nub.lock`).
+- `nub run dev` — Next dev server on port 3000.
+- `nub run build` / `nub run start`
+- `nub run check` / `nub run check:fix` — Biome, scoped to `app/**`.
+- `nub run db:auth:migrate` — creates/updates Better Auth tables.
+- `nub run db:migrate` — applies `db/migrations/*.sql` once, tracked in `schema_migrations`.
+- `nub run db:seed` — demo catalog + the six demo accounts (idempotent).
+- `nub run db:setup` — the three above, in order.
 
-- `bun install` — Bun is the package manager; `bun.lock` is tracked (`package-lock.json` is not).
-- `bun run dev` — dev server. Prefer `astro dev --background`; manage with `astro dev stop|status|logs`.
-- `bun run check` / `bun run check:server` — typecheck frontend (astro check) / backend (separate `server/tsconfig.json`).
-- `bun test` — bun:test. Only `src/i18n/tests/i18n.test.ts` exists today.
-- `bun run dev:server` — messaging backend only; needed for the Messaging view and Kitt panel, not for the rest of the dashboard.
+## Auth rules
 
-`withnext/`:
-
-- `bun run dev` / `bun run build` / `bun run start`
-- `bun run check` / `bun run check:fix` — Biome, scoped to `app/**` only (see `withnext/biome.json` `files.includes`).
-- `bun run db:*` — wrap `bunx -y @insforge/cli@latest`. Migrations live in `withnext/migrations/` as `<timestamp>_<kebab-case>.sql`; apply with `bun run db:migrate`.
-- No test suite.
+- `app/lib/auth.ts` is server-only. Never import it from a client component; use `app/lib/auth-client.ts`.
+- Every route handler that touches data must go through `withAuth` (reads) or `withWriteAuth` (writes) from `app/lib/api-auth.ts`.
+- `viewer` is read-only; the API enforces it (REST and GraphQL mutations).
+- Public sign-ups get `viewer`; promote roles in the database. Unknown or inactive accounts fail closed in `getSessionUser`.
+- Roles are `input: false` in Better Auth. Role changes happen in the database, never from the browser.
+- Demo credentials live in `app/lib/seeds/accounts.ts` and are rendered by `LoginPage` from that same module.
 
 ## Gotchas
 
-- CI lives at the repo root: `.github/workflows/deploy.yml`. GitHub only reads workflows from the root, and the jobs use `working-directory: withnext`. Push/PR run the quality job only; deploys are manual (`gh workflow run deploy.yml`) until `INSFORGE_ACCESS_TOKEN` and `CLOUDFLARE_API_TOKEN` are provisioned as repo secrets.
-- `withnext` runs Next.js 16.2 + React 19.2 with APIs that differ from older releases. After `bun install`, read `withnext/node_modules/next/dist/docs/` before writing framework code and heed deprecation notices.
-- `withastro` always attaches an adapter. `ASTRO_ADAPTER` selects `netlify | vercel | cloudflare | node`; unset defaults to `node` (standalone), not a fully static build, even though `withastro/AGENTS.md` and `DEPLOY.md` hints say otherwise. Netlify sets it in `netlify.toml`.
-- Never run `insforge domains attach senseikatana.com` or `insforge domains dns sync` — it overwrites the records the Cloudflare Worker needs. App URL is `https://whm.senseikatana.com` (worker `whm-withnext-proxy`, upstream `https://8cc79ec9.insforge.site`).
-- `withnext` has unreachable layers from an earlier iteration: `app/api/*` (except nothing uses them), `app/lib/apis/*`, `app/lib/queries.ts`, and most of `app/lib/services/*` are not imported by the UI. Verify imports before extending or deleting them.
-- `withastro` messaging env vars in `.env.example` do not match what `server/` reads (`WHATSAPP_PHONE_NUMBER_ID` vs `WHATSAPP_PHONE_ID`, `SERVER_PORT` vs `PORT`, etc.). `server/index.ts` also loads `.env` from the CWD, not from `server/`.
-- Prisma in `withastro` is vestigial: only `prisma/seed.ts` and an unused `src/lib/prisma.ts` import it; the dashboard persists JSON documents to the InsForge `wms_docs` table instead. Its `prisma:*` scripts are broken (the installed `prisma` is the v8 RC Platform CLI with no `generate` command), and `bun run check` fails on those two files.
-- InsForge credentials never go in the repo: app code reads env vars (`.env` / `.env.local`), the CLI reads `.insforge/project.json`. Projects: `astro-awesome-projects` (`https://5xz8euqt.ap-southeast.insforge.app`) and `whm-withnext` (`https://8cc79ec9.ap-southeast.insforge.app`). Prefer the `insforge*` skills over guessing SDK APIs.
+- `DATABASE_URL` and `BETTER_AUTH_SECRET` are required at runtime. Missing `DATABASE_URL` fails fast in `app/lib/db.ts` instead of silently pointing somewhere else.
+- `pg` is in `serverExternalPackages` (see `next.config.ts`); do not import `app/lib/db.ts` from client code.
+- SQL is built only from allowlisted table/column names (`app/lib/table-columns.ts`). Add new columns there before exposing them through the CRUD API.
+- `nub install` enforces a 24h minimum release age. If a freshly published package is blocked, pick the previous patch or exempt it explicitly instead of disabling the gate.
+- `withastro`-era leftovers: `app/lib/apis/*`, `app/lib/queries.ts`, `app/lib/services/api-manager.ts` and most `app/lib/services/*` are not imported by the UI. Verify imports before extending or deleting them.
+- The Neon project provisioned by the agent is claimable and expires unless claimed. Claiming rotates `DATABASE_URL`; update the env afterwards.
+- OAuth buttons read `/api/auth-config`; if a provider is not configured the button stays disabled. There are no app-level `GOOGLE_CLIENT_ID` reads anywhere else.
 
 ## Conventions
 
 - Conventional Commits (`feat:`, `fix:`, `docs(scope):`, `chore:`), Spanish or English, no AI-attribution trailers.
-- Branch flow: work locally on `dev`; only `origin/main` exists and only `main` deploys.
-- Biome (withnext): double quotes, semicolons, tab indent, 100 line width, auto-organized imports; `noExplicitAny` and `useExhaustiveDependencies` are intentionally off.
-- `withastro` public site must stay `.astro` with zero client JS; React islands only for stateful dashboard interactions. Products are cards on the public site and tables (`CrudView`) in the dashboard.
+- Biome: double quotes, semicolons, tab indent, 100 line width, auto-organized imports; `noExplicitAny` is off.
+- Public UI stays in Spanish; code identifiers, comments and commit messages in English.
+- Do not commit `.env*` files (`.env.example` is committed).

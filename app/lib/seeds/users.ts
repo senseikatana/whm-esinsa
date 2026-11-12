@@ -1,9 +1,9 @@
 import type { UserProfile, UserRole } from "../../interfaces";
 
 /**
- * Usuarios de ejemplo para el SGA.
- * NOTA: Estos usuarios deben crearse vía auth.signUp() o desde el dashboard de InsForge.
- * El seed solo perfiles, no cuentas de auth.
+ * Usuarios demo del SGA.
+ * NOTA: las cuentas de auth las crea `bun run db:seed` a partir de
+ * `app/lib/seeds/accounts.ts`. Este archivo solo describe perfiles.
  */
 export const SEED_USER_PROFILES: Omit<UserProfile, "id" | "created_at" | "updated_at">[] = [
 	{

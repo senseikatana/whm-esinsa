@@ -1,6 +1,6 @@
 {
-  "name": "whm-esinsa-withnext",
-  "version": "0.7.0",
+  "name": "whm-esinsa",
+  "version": "0.8.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,20 +11,10 @@
     "format:fix": "biome format --write ./app",
     "check": "biome check ./app",
     "check:fix": "biome check --write ./app",
-    "worker:dev": "wrangler dev --config ./cloudflare-worker/wrangler.toml",
-    "worker:deploy": "wrangler deploy --config ./cloudflare-worker/wrangler.toml",
-    "worker:tail": "wrangler tail --config ./cloudflare-worker/wrangler.toml",
-    "worker:delete": "wrangler delete --config ./cloudflare-worker/wrangler.toml whm-withnext-proxy",
-    "db": "bunx -y @insforge/cli@latest",
-    "db:health": "bunx -y @insforge/cli@latest current",
-    "db:query": "bunx -y @insforge/cli@latest db query",
-    "db:migrate": "bunx -y @insforge/cli@latest db migrations up --all",
-    "db:migrate:new": "bunx -y @insforge/cli@latest db migrations new",
-    "db:secrets": "bunx -y @insforge/cli@latest secrets list",
-    "db:deploy": "bunx -y @insforge/cli@latest deployments deploy .",
-    "db:diagnose": "bunx -y @insforge/cli@latest diagnose",
-    "deploy": "concurrently --names build,worker --prefixColors blue,green \"bun run build\" \"bun run worker:deploy\"",
-    "deploy:full": "concurrently --names insforge,worker --prefixColors cyan,magenta \"bun run db:deploy\" \"bun run worker:deploy\"",
+    "db:auth:migrate": "nub x auth@latest migrate --config app/lib/auth.ts -y",
+    "db:migrate": "nub scripts/db-migrate.ts",
+    "db:seed": "nub scripts/seed.ts",
+    "db:setup": "nub run db:auth:migrate && nub run db:migrate && nub run db:seed",
     "postinstall": "next telemetry disable",
     "prepare": "husky"
   },
@@ -32,10 +22,11 @@
     "@apollo/client": "^4.3.8",
     "@apollo/server": "^5.5.1",
     "@as-integrations/next": "^4.1.0",
-    "@insforge/sdk": "^1.5.2",
+    "better-auth": "^1.7.20",
     "graphql": "^17.1.0",
     "lucide-react": "^1.72.0",
     "next": "16.4.6",
+    "pg": "^8.23.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
@@ -43,18 +34,20 @@
     "@biomejs/biome": "2.6.6",
     "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "babel-plugin-react-compiler": "1.0.0",
-    "concurrently": "^10.0.7",
     "tailwindcss": "^4.3.5",
-    "typescript": "^7.0.2",
-    "wrangler": "^4.160.1"
+    "typescript": "^7.0.2"
   },
   "ignoreScripts": [
     "sharp",
     "unrs-resolver"
   ],
+  "overrides": {
+    "@graphql-tools/utils": "12.1.0"
+  },
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
